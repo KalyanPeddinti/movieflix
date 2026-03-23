@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/android-sim/"
+title = "PhoneAssist - Android Simulator"
+version = "1.0.0"
+id = "artifacts/android-sim"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/android-sim/" ]
+localPort = 23892
+
+[services.development]
+run = "pnpm --filter @workspace/android-sim run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/android-sim", "run", "build" ]
+publicDir = "artifacts/android-sim/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23892"
+BASE_PATH = "/android-sim/"

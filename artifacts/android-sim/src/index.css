@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Google+Sans:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: 'Roboto', 'Google Sans', sans-serif;
+  --font-display: 'Google Sans', sans-serif;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-surface: hsl(var(--surface));
+  --color-surface-container: hsl(var(--surface-container));
+  --color-surface-container-high: hsl(var(--surface-container-high));
+  
+  --color-primary: hsl(var(--primary));
+  --color-on-primary: hsl(var(--on-primary));
+  --color-primary-container: hsl(var(--primary-container));
+  --color-on-primary-container: hsl(var(--on-primary-container));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-on-secondary: hsl(var(--on-secondary));
+  --color-secondary-container: hsl(var(--secondary-container));
+  --color-on-secondary-container: hsl(var(--on-secondary-container));
+
+  --color-outline: hsl(var(--outline));
+  --color-outline-variant: hsl(var(--outline-variant));
+}
+
+:root {
+  /* Material You Dark Theme (Deep Purple/Indigo Baseline) */
+  --background: 260 14% 8%; /* #141218 */
+  --foreground: 270 11% 90%; /* #E6E0E9 */
+  
+  --surface: 260 14% 8%; 
+  --surface-container: 260 11% 14%; /* #211F26 */
+  --surface-container-high: 260 10% 18%; /* #2B2930 */
+
+  --primary: 260 100% 87%; /* #D0BCFF */
+  --on-primary: 260 80% 25%; /* #381E72 */
+  --primary-container: 260 30% 31%; /* #4A4458 */
+  --on-primary-container: 260 50% 90%; /* #E8DEF8 */
+
+  --secondary: 260 20% 80%; /* #CCC2DC */
+  --on-secondary: 260 20% 25%; /* #332D41 */
+  --secondary-container: 260 20% 31%; /* #4A4458 */
+  --on-secondary-container: 260 20% 90%; /* #E8DEF8 */
+
+  --outline: 260 5% 55%; /* #938F99 */
+  --outline-variant: 260 10% 30%; /* #49454F */
+}
+
+@layer base {
+  body {
+    @apply bg-black text-foreground font-sans antialiased;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* Custom scrollbar for chat area to look like Android */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-outline-variant rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-outline;
+  }
+}
+
+/* Hide inputs default outline */
+input:focus {
+  outline: none;
+}
