@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Send, MoreVertical, Settings, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { useChat, useVoiceInput, type SupportedLanguage } from '@/hooks/use-chat';
+import { useChat, useVoiceInput, type SupportedLanguage, type DevicePayload } from '@/hooks/use-chat';
 import { TOPIC_LABELS } from '@/lib/settingsGuides';
 import { VisualGuide } from './VisualGuide';
 import { ConflictCard } from './ConflictCard';
@@ -58,7 +58,7 @@ function OpenSettingsButton({ topic }: { topic: string }) {
   );
 }
 
-export function ChatInterface() {
+export function ChatInterface({ devicePayload }: { devicePayload: DevicePayload }) {
   const {
     messages,
     sendMessage,
@@ -74,7 +74,7 @@ export function ChatInterface() {
     settingsGuide,
     effectiveUiStyle,
     detectedDevice,
-  } = useChat();
+  } = useChat({ devicePayload });
 
   const [inputValue, setInputValue] = useState('');
   const [guideVisible, setGuideVisible] = useState(true);
@@ -406,7 +406,6 @@ export function ChatInterface() {
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
               color: '#E0DCF8', fontSize: 13.5,
-              placeholder: '#555',
             }}
           />
 

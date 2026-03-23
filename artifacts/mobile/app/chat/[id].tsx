@@ -34,6 +34,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AgentActionBar from "@/components/AgentActionBar";
+import DeviceInfoModal, { type ManualDeviceInfo } from "@/components/DeviceInfoModal";
 import VisualGuideSheet from "@/components/VisualGuideSheet";
 import Colors from "@/constants/colors";
 import { detectTopic, getGuideForDevice, detectUiStyleFromText } from "@/constants/settingsGuides";
@@ -448,9 +449,22 @@ export default function ChatScreen() {
     savedMessage: string;     // the message waiting to be sent
   } | null>(null);
 
-  // Get device info once
+  // Get device info once; allow manual override when not auto-detected
   const deviceInfo = useMemo(() => getDeviceInfo(), []);
-  const devicePayload = useMemo(() => toApiPayload(deviceInfo), [deviceInfo]);
+  const [manualDevice, setManualDevice] = useState<ManualDeviceInfo | null>(null);
+  const showDeviceModal = !deviceInfo.isDetected && manualDevice === null;
+
+  const devicePayload = useMemo(() => {
+    if (manualDevice) {
+      return {
+        model: manualDevice.model,
+        manufacturer: manualDevice.manufacturer,
+        osName: manualDevice.osName,
+        osVersion: manualDevice.osVersion,
+      };
+    }
+    return toApiPayload(deviceInfo);
+  }, [deviceInfo, manualDevice]);
 
   const inputRef = useRef<TextInput>(null);
   const { isListening, transcript, startListening, stopListening } = useVoiceInput(selectedLang);
@@ -728,11 +742,11 @@ export default function ChatScreen() {
           <Text style={[styles.headerTitle, { color: colors.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
             {title}
           </Text>
-          {deviceInfo.isDetected ? (
+          {deviceInfo.isDetected || manualDevice ? (
             <View style={styles.deviceBadge}>
               <Ionicons name="phone-portrait-outline" size={10} color={Colors.success} />
               <Text style={[styles.deviceBadgeText, { color: Colors.success, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
-                {deviceInfo.model} · {deviceInfo.osName} {deviceInfo.osVersion}
+                {manualDevice ? manualDevice.model : deviceInfo.model} · {manualDevice ? manualDevice.osName : deviceInfo.osName} {manualDevice ? manualDevice.osVersion : deviceInfo.osVersion}
               </Text>
             </View>
           ) : (
@@ -986,6 +1000,12 @@ export default function ChatScreen() {
           onClose={() => setGuideVisible(false)}
         />
       )}
+
+      {/* Device info modal — shown when device is not auto-detected */}
+      <DeviceInfoModal
+        visible={showDeviceModal}
+        onComplete={(info) => setManualDevice(info)}
+      />
     </View>
   );
 }

@@ -21,12 +21,12 @@ const LANG_TO_LOCALE: Record<SupportedLanguage, string> = {
   en: 'en-US', hi: 'hi-IN', te: 'te-IN',
 };
 
-const DEFAULT_DEVICE = {
-  model: 'Google Pixel 8',
-  manufacturer: 'Google',
-  osName: 'Android',
-  osVersion: '14',
-};
+export interface DevicePayload {
+  model: string;
+  manufacturer: string;
+  osName: string;
+  osVersion: string;
+}
 
 // ─── device label extractor ────────────────────────────────────────────────────
 function extractDeviceLabel(text: string, style: UiStyle): string {
@@ -160,7 +160,13 @@ export function useVoiceInput(lang: SupportedLanguage) {
 }
 
 // ─── Main chat hook ────────────────────────────────────────────────────────────
-export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
+export function useChat({
+  initialLanguage = 'en' as SupportedLanguage,
+  devicePayload,
+}: {
+  initialLanguage?: SupportedLanguage;
+  devicePayload: DevicePayload;
+}) {
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -187,7 +193,7 @@ export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
             title: 'Phone Settings Assistant',
             language: initialLanguage,
             initialPrompt: '',
-            deviceInfo: DEFAULT_DEVICE,
+            deviceInfo: devicePayload,
           }),
         });
         if (!res.ok) throw new Error('Failed to create conversation');
@@ -251,7 +257,7 @@ export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
   // ─── Core stream send ───────────────────────────────────────────────────────
   const doStreamSend = useCallback(async (
     content: string,
-    devicePayload: typeof DEFAULT_DEVICE,
+    activePayload: DevicePayload,
     isFirst: boolean,
   ) => {
     if (!conversationId) return;
@@ -274,7 +280,7 @@ export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
       const response = await fetch(`${API_BASE}/gemini/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({ content, language, deviceInfo: devicePayload }),
+        body: JSON.stringify({ content, language, deviceInfo: activePayload }),
         signal: abortControllerRef.current.signal,
       });
 
@@ -348,8 +354,8 @@ export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
     }
 
     const payload = chosenUiStyle
-      ? syntheticDevicePayload(chosenUiStyle, DEFAULT_DEVICE.model)
-      : DEFAULT_DEVICE;
+      ? syntheticDevicePayload(chosenUiStyle, devicePayload.model)
+      : devicePayload;
 
     await doStreamSend(trimmed, payload, messages.filter(m => m.role === 'user').length === 0);
   }, [isStreaming, chosenUiStyle, doStreamSend, messages]);
@@ -362,7 +368,7 @@ export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
     setPendingConflict(null);
 
     const activePayload = resolvedStyle === defaultUiStyle
-      ? DEFAULT_DEVICE
+      ? devicePayload
       : syntheticDevicePayload(mentionedStyle, mentionedLabel);
 
     await doStreamSend(savedMessage, activePayload, messages.filter(m => m.role === 'user').length === 0);
@@ -404,7 +410,7 @@ export function useChat({ initialLanguage = 'en' as SupportedLanguage } = {}) {
     settingTopic,
     settingsGuide,
     effectiveUiStyle,
-    detectedDevice: DEFAULT_DEVICE.model,
+    detectedDevice: devicePayload.model,
     chosenUiStyle,
   };
 }
