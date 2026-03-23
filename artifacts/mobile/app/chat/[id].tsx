@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -32,7 +33,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import AgentActionBar from "@/components/AgentActionBar";
+import VisualGuideSheet from "@/components/VisualGuideSheet";
 import Colors from "@/constants/colors";
+import { SETTINGS_GUIDES, detectTopic } from "@/constants/settingsGuides";
 import { streamMessage, fetchConversation } from "@/lib/api";
 
 // ─── unique ID generator ──────────────────────────────────────────────────────
@@ -78,27 +82,18 @@ function useVoiceInput(lang: LangCode) {
         );
         return;
       }
-
-      const SpeechRecognition =
+      const SR =
         (window as any).SpeechRecognition ||
         (window as any).webkitSpeechRecognition;
-
-      const recognition = new SpeechRecognition();
+      const recognition = new SR();
       recognition.lang = lang;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognition.continuous = false;
-
       recognitionRef.current = recognition;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setTranscript("");
-      };
-
+      recognition.onstart = () => { setIsListening(true); setTranscript(""); };
       recognition.onresult = (event: any) => {
-        let interim = "";
-        let final = "";
+        let interim = "", final = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const t = event.results[i][0].transcript;
           if (event.results[i].isFinal) final += t;
@@ -107,16 +102,8 @@ function useVoiceInput(lang: LangCode) {
         setTranscript(final || interim);
         if (final) onResult(final.trim());
       };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-        setTranscript("");
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
+      recognition.onerror = () => { setIsListening(false); setTranscript(""); };
+      recognition.onend = () => { setIsListening(false); };
       recognition.start();
     },
     [isWebSpeechAvailable, lang]
@@ -127,7 +114,7 @@ function useVoiceInput(lang: LangCode) {
     setIsListening(false);
   }, []);
 
-  return { isListening, transcript, startListening, stopListening, isWebSpeechAvailable };
+  return { isListening, transcript, startListening, stopListening };
 }
 
 // ─── TypingDot ────────────────────────────────────────────────────────────────
@@ -137,8 +124,7 @@ function TypingDot({ delay }: { delay: number }) {
     const t = setTimeout(() => {
       opacity.value = withRepeat(
         withSequence(withTiming(1, { duration: 400 }), withTiming(0.3, { duration: 400 })),
-        -1,
-        false
+        -1, false
       );
     }, delay);
     return () => clearTimeout(t);
@@ -158,31 +144,18 @@ function TypingIndicator({ isDark }: { isDark: boolean }) {
 }
 
 // ─── MicButton ───────────────────────────────────────────────────────────────
-function MicButton({
-  isListening,
-  onPress,
-  isDark,
-}: {
-  isListening: boolean;
-  onPress: () => void;
-  isDark: boolean;
-}) {
+function MicButton({ isListening, onPress }: { isListening: boolean; onPress: () => void }) {
   const scale = useSharedValue(1);
   const ringScale = useSharedValue(1);
   const ringOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (isListening) {
-      scale.value = withRepeat(
-        withSequence(withSpring(1.12), withSpring(1)),
-        -1,
-        true
-      );
+      scale.value = withRepeat(withSequence(withSpring(1.12), withSpring(1)), -1, true);
       ringScale.value = withRepeat(withTiming(1.9, { duration: 900 }), -1, false);
       ringOpacity.value = withRepeat(
         withSequence(withTiming(0.4, { duration: 300 }), withTiming(0, { duration: 600 })),
-        -1,
-        false
+        -1, false
       );
     } else {
       scale.value = withSpring(1);
@@ -192,36 +165,17 @@ function MicButton({
   }, [isListening]);
 
   const btnStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ringScale.value }],
-    opacity: ringOpacity.value,
-  }));
-
+  const ringStyle = useAnimatedStyle(() => ({ transform: [{ scale: ringScale.value }], opacity: ringOpacity.value }));
   const bg = isListening ? Colors.danger : Colors.primary;
 
   return (
     <Pressable
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        onPress();
-      }}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onPress(); }}
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
     >
       <View style={styles.micOuter}>
-        <Animated.View
-          style={[
-            styles.micRing,
-            { borderColor: bg },
-            ringStyle,
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.micBtn,
-            { backgroundColor: bg },
-            btnStyle,
-          ]}
-        >
+        <Animated.View style={[styles.micRing, { borderColor: bg }, ringStyle]} />
+        <Animated.View style={[styles.micBtn, { backgroundColor: bg }, btnStyle]}>
           <Ionicons name={isListening ? "stop" : "mic"} size={20} color="#fff" />
         </Animated.View>
       </View>
@@ -246,46 +200,19 @@ function LanguageBar({
         return (
           <Pressable
             key={l.code}
-            onPress={() => {
-              Haptics.selectionAsync();
-              onSelect(l.code);
-            }}
+            onPress={() => { Haptics.selectionAsync(); onSelect(l.code); }}
             style={[
               styles.langBtn,
               {
-                backgroundColor: active
-                  ? Colors.primary
-                  : isDark
-                  ? Colors.dark.surface
-                  : "#EBF3FB",
-                borderColor: active
-                  ? Colors.primary
-                  : isDark
-                  ? Colors.dark.border
-                  : "#C8E0F5",
+                backgroundColor: active ? Colors.primary : isDark ? Colors.dark.surface : "#EBF3FB",
+                borderColor: active ? Colors.primary : isDark ? Colors.dark.border : "#C8E0F5",
               },
             ]}
           >
-            <Text
-              style={[
-                styles.langLabel,
-                {
-                  color: active ? "#fff" : isDark ? Colors.dark.textSecondary : Colors.primary,
-                  fontFamily: "Inter_600SemiBold",
-                },
-              ]}
-            >
+            <Text style={[styles.langLabel, { color: active ? "#fff" : isDark ? Colors.dark.textSecondary : Colors.primary, fontFamily: "Inter_600SemiBold" }]}>
               {l.label}
             </Text>
-            <Text
-              style={[
-                styles.langFull,
-                {
-                  color: active ? "rgba(255,255,255,0.8)" : isDark ? Colors.dark.textSecondary : Colors.primary,
-                  fontFamily: "Inter_400Regular",
-                },
-              ]}
-            >
+            <Text style={[styles.langFull, { color: active ? "rgba(255,255,255,0.8)" : isDark ? Colors.dark.textSecondary : Colors.primary, fontFamily: "Inter_400Regular" }]}>
               {l.full}
             </Text>
           </Pressable>
@@ -335,13 +262,10 @@ function MessageBubble({ message, isDark }: { message: LocalMessage; isDark: boo
           styles.bubble,
           isUser
             ? [styles.bubbleUser, { backgroundColor: Colors.primary }]
-            : [
-                styles.bubbleAssistant,
-                {
-                  backgroundColor: isDark ? Colors.dark.surface : "#EBF3FB",
-                  borderColor: isDark ? Colors.dark.border : "#D4E8F5",
-                },
-              ],
+            : [styles.bubbleAssistant, {
+                backgroundColor: isDark ? Colors.dark.surface : "#EBF3FB",
+                borderColor: isDark ? Colors.dark.border : "#D4E8F5",
+              }],
         ]}
       >
         {isUser || !parsed ? (
@@ -373,7 +297,7 @@ function MessageBubble({ message, isDark }: { message: LocalMessage; isDark: boo
   );
 }
 
-// ─── suggestion prompts ───────────────────────────────────────────────────────
+// ─── suggestions ─────────────────────────────────────────────────────────────
 const SUGGESTIONS = [
   "Connect to Bluetooth headphones",
   "Reduce my screen brightness",
@@ -398,10 +322,17 @@ export default function ChatScreen() {
   const [title, setTitle] = useState("ElderAssist");
   const [initialSent, setInitialSent] = useState(false);
   const [selectedLang, setSelectedLang] = useState<LangCode>("en-US");
+  const [guideVisible, setGuideVisible] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
-  const { isListening, transcript, startListening, stopListening, isWebSpeechAvailable } =
-    useVoiceInput(selectedLang);
+  const { isListening, transcript, startListening, stopListening } = useVoiceInput(selectedLang);
+
+  // Detect setting topic from initial prompt or conversation title
+  const settingTopic = useMemo(
+    () => detectTopic(initialPrompt ?? title),
+    [initialPrompt, title]
+  );
+  const settingsGuide = settingTopic ? SETTINGS_GUIDES[settingTopic] : null;
 
   // Load existing conversation
   useEffect(() => {
@@ -420,7 +351,7 @@ export default function ChatScreen() {
     });
   }, [convId]);
 
-  // Auto-send initial prompt from quick buttons
+  // Auto-send initial prompt
   useEffect(() => {
     if (initialPrompt && !initialSent && messages.length === 0) {
       setInitialSent(true);
@@ -430,9 +361,7 @@ export default function ChatScreen() {
 
   // Sync interim transcript to input field
   useEffect(() => {
-    if (isListening && transcript) {
-      setInput(transcript);
-    }
+    if (isListening && transcript) setInput(transcript);
   }, [isListening, transcript]);
 
   const handleMicPress = useCallback(() => {
@@ -451,7 +380,6 @@ export default function ChatScreen() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || isStreaming) return;
-
       if (isListening) stopListening();
       setInput("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -472,10 +400,7 @@ export default function ChatScreen() {
             fullContent += chunk;
             if (!assistantAdded) {
               setShowTyping(false);
-              setMessages((prev) => [
-                ...prev,
-                { id: genId(), role: "assistant", content: fullContent },
-              ]);
+              setMessages((prev) => [...prev, { id: genId(), role: "assistant", content: fullContent }]);
               assistantAdded = true;
             } else {
               setMessages((prev) => {
@@ -516,6 +441,9 @@ export default function ChatScreen() {
   const webTop = Platform.OS === "web" ? 67 : insets.top;
   const webBottom = Platform.OS === "web" ? 34 : insets.bottom;
 
+  // Show the agent bar only after there is at least one assistant message
+  const hasAssistantMsg = messages.some((m) => m.role === "assistant");
+
   return (
     <View style={[styles.container, { backgroundColor: isDark ? Colors.dark.background : Colors.light.background }]}>
       {/* Header */}
@@ -530,10 +458,7 @@ export default function ChatScreen() {
         ]}
       >
         <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >
@@ -547,7 +472,17 @@ export default function ChatScreen() {
             Phone Settings Helper
           </Text>
         </View>
-        <View style={styles.aiDot} />
+        {/* Visual guide shortcut in header */}
+        {settingsGuide && (
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setGuideVisible(true); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => [styles.guideHeaderBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Ionicons name="phone-portrait" size={18} color={Colors.primary} />
+          </Pressable>
+        )}
+        <View style={[styles.aiDot, { marginLeft: settingsGuide ? 8 : 8 }]} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
@@ -557,7 +492,21 @@ export default function ChatScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <MessageBubble message={item} isDark={isDark} />}
           inverted={messages.length > 0}
-          ListHeaderComponent={showTyping ? <TypingIndicator isDark={isDark} /> : null}
+          ListHeaderComponent={
+            <>
+              {showTyping && <TypingIndicator isDark={isDark} />}
+              {/* Agent action bar shown below the last message (top of inverted list) */}
+              {hasAssistantMsg && !isStreaming && (
+                <View style={styles.agentBarWrap}>
+                  <AgentActionBar
+                    topic={initialPrompt ?? title}
+                    guide={settingsGuide}
+                    onShowGuide={() => setGuideVisible(true)}
+                  />
+                </View>
+              )}
+            </>
+          }
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.chatContent}
@@ -628,11 +577,7 @@ export default function ChatScreen() {
               styles.inputRow,
               {
                 backgroundColor: isDark ? Colors.dark.surface : "#F0F6FF",
-                borderColor: isListening
-                  ? Colors.danger
-                  : isDark
-                  ? Colors.dark.border
-                  : Colors.light.border,
+                borderColor: isListening ? Colors.danger : isDark ? Colors.dark.border : Colors.light.border,
               },
             ]}
           >
@@ -640,36 +585,18 @@ export default function ChatScreen() {
               ref={inputRef}
               value={input}
               onChangeText={setInput}
-              placeholder={
-                isListening
-                  ? "Speak now..."
-                  : "Type or speak your request..."
-              }
+              placeholder={isListening ? "Speak now..." : "Type or speak your request..."}
               placeholderTextColor={
-                isListening
-                  ? Colors.danger
-                  : isDark
-                  ? Colors.dark.textSecondary
-                  : Colors.light.textSecondary
+                isListening ? Colors.danger : isDark ? Colors.dark.textSecondary : Colors.light.textSecondary
               }
               multiline
               blurOnSubmit={false}
-              onSubmitEditing={() => {
-                handleSend(input);
-                inputRef.current?.focus();
-              }}
+              onSubmitEditing={() => { handleSend(input); inputRef.current?.focus(); }}
               style={[styles.textInput, { color: colors.text, fontFamily: "Inter_400Regular" }]}
             />
-
-            {/* Mic button */}
-            <MicButton isListening={isListening} onPress={handleMicPress} isDark={isDark} />
-
-            {/* Send button */}
+            <MicButton isListening={isListening} onPress={handleMicPress} />
             <Pressable
-              onPress={() => {
-                handleSend(input);
-                inputRef.current?.focus();
-              }}
+              onPress={() => { handleSend(input); inputRef.current?.focus(); }}
               disabled={isStreaming || !input.trim()}
               style={({ pressed }) => [
                 styles.sendBtn,
@@ -688,6 +615,15 @@ export default function ChatScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Visual guide modal */}
+      {settingsGuide && (
+        <VisualGuideSheet
+          guide={settingsGuide}
+          visible={guideVisible}
+          onClose={() => setGuideVisible(false)}
+        />
+      )}
     </View>
   );
 }
@@ -704,17 +640,29 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17 },
   headerSub: { fontSize: 12, marginTop: 1 },
+  guideHeaderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${Colors.primary}18`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   aiDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.success,
-    marginLeft: 8,
   },
   chatContent: {
     paddingHorizontal: 14,
     paddingVertical: 14,
     flexGrow: 1,
+  },
+  agentBarWrap: {
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   bubbleWrap: {
     marginBottom: 12,
@@ -766,12 +714,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     gap: 5,
   },
-  typingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-  },
+  typingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
   emptyChat: {
     flex: 1,
     paddingTop: 40,
@@ -790,27 +733,12 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 24, marginBottom: 10, textAlign: "center" },
   heroSub: { fontSize: 16, textAlign: "center", lineHeight: 24, marginBottom: 24 },
   suggestionList: { width: "100%", gap: 10 },
-  suggestionChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
+  suggestionChip: { paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
   suggestionText: { fontSize: 15, textAlign: "center" },
 
   // Input area
-  inputArea: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    gap: 8,
-  },
-
-  // Language bar
-  langBar: {
-    flexDirection: "row",
-    gap: 8,
-  },
+  inputArea: { paddingHorizontal: 12, paddingTop: 8, borderTopWidth: 1, gap: 8 },
+  langBar: { flexDirection: "row", gap: 8 },
   langBtn: {
     flex: 1,
     flexDirection: "row",
@@ -824,8 +752,6 @@ const styles = StyleSheet.create({
   },
   langLabel: { fontSize: 15 },
   langFull: { fontSize: 12 },
-
-  // Listening banner
   listeningBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -835,8 +761,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   listeningText: { fontSize: 13 },
-
-  // Input row
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -854,14 +778,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 4,
   },
-
-  // Mic button
-  micOuter: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  micOuter: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
   micRing: {
     position: "absolute",
     width: 38,
@@ -869,15 +786,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     borderWidth: 2,
   },
-  micBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // Send button
+  micBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   sendBtn: {
     width: 38,
     height: 38,
