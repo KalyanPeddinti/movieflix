@@ -48,46 +48,157 @@ function buildSystemPrompt(
   }
 
   const { model, manufacturer, osName, osVersion } = deviceInfo;
+  const mfgLower = manufacturer.toLowerCase();
+  const modelLower = model.toLowerCase();
   const isIos = osName.toLowerCase().includes("ios");
-  const isSamsung = manufacturer.toLowerCase().includes("samsung");
-  const isPixel = manufacturer.toLowerCase().includes("google") || model.toLowerCase().includes("pixel");
+  const isSamsung = mfgLower.includes("samsung");
+  const isPixel = mfgLower.includes("google") || modelLower.includes("pixel");
+  const isOnePlus = mfgLower.includes("oneplus") || mfgLower.includes("one plus");
+  const isMotorola = mfgLower.includes("motorola") || mfgLower.includes("moto");
+  const isXiaomi = mfgLower.includes("xiaomi") || mfgLower.includes("redmi") || mfgLower.includes("poco");
+  const isOppo = mfgLower.includes("oppo");
+  const isRealme = mfgLower.includes("realme");
+  const isVivo = mfgLower.includes("vivo");
+  const isSony = mfgLower.includes("sony") || modelLower.includes("xperia");
+  const isNokia = mfgLower.includes("nokia");
+  const isHuawei = mfgLower.includes("huawei");
+  const isHonor = mfgLower.includes("honor");
 
-  let deviceContext = `\n\nDEVICE INFORMATION (automatically detected):\n`;
+  let deviceContext = `\n\nDEVICE INFORMATION:\n`;
   deviceContext += `- Phone model: ${model}\n`;
   deviceContext += `- Manufacturer: ${manufacturer}\n`;
   deviceContext += `- Operating system: ${osName} ${osVersion}\n`;
-  deviceContext += `\nIMPORTANT: You ALREADY KNOW their exact phone. Do NOT ask what phone they have. Give instructions specifically for the ${model} running ${osName} ${osVersion}.\n`;
+  deviceContext += `\nIMPORTANT: Give instructions specifically for the ${model} running ${osName} ${osVersion}. Do NOT ask what phone they have.\n`;
 
   if (isIos) {
-    deviceContext += `\nNAVIGATION PATHS FOR THIS DEVICE (iPhone with iOS ${osVersion}):\n`;
+    deviceContext += `\nNAVIGATION PATHS (${model} · iOS ${osVersion}):\n`;
     deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
     deviceContext += `- Wi-Fi: Settings → Wi-Fi → toggle ON → tap network name\n`;
     deviceContext += `- Volume/Ringtone: Settings → Sounds & Haptics → drag Ringer slider\n`;
     deviceContext += `- Brightness: Settings → Display & Brightness → drag brightness slider\n`;
+    deviceContext += `- Auto-rotate: Swipe down from top-right → tap Rotation Lock icon to unlock\n`;
     deviceContext += `- Do Not Disturb: Settings → Focus → Do Not Disturb → toggle ON\n`;
     deviceContext += `- Battery saver: Settings → Battery → Low Power Mode → toggle ON\n`;
+
   } else if (isSamsung) {
-    deviceContext += `\nNAVIGATION PATHS FOR THIS DEVICE (Samsung ${model} with One UI ${osVersion}):\n`;
+    deviceContext += `\nNAVIGATION PATHS (${model} · One UI on Android ${osVersion}):\n`;
     deviceContext += `- Bluetooth: Settings → Connections → Bluetooth → toggle ON → tap device\n`;
     deviceContext += `- Wi-Fi: Settings → Connections → Wi-Fi → toggle ON → tap network\n`;
-    deviceContext += `- Volume: Settings → Sounds and vibration → drag volume slider\n`;
+    deviceContext += `- Volume: Settings → Sounds and vibration → drag volume sliders\n`;
     deviceContext += `- Brightness: Settings → Display → drag brightness slider at top\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto rotate (toggle ON)\n`;
     deviceContext += `- Do Not Disturb: Settings → Modes and Routines → Do not disturb → toggle ON\n`;
     deviceContext += `- Battery saver: Settings → Battery and device care → Battery → Power saving → toggle ON\n`;
+
   } else if (isPixel) {
-    deviceContext += `\nNAVIGATION PATHS FOR THIS DEVICE (Google ${model} with Android ${osVersion}):\n`;
+    deviceContext += `\nNAVIGATION PATHS (${model} · Android ${osVersion}):\n`;
     deviceContext += `- Bluetooth: Settings → Connected devices → Pair new device → tap device name\n`;
     deviceContext += `- Wi-Fi: Settings → Network & internet → Internet → tap network name\n`;
     deviceContext += `- Volume: Settings → Sound & vibration → drag Media volume slider\n`;
     deviceContext += `- Brightness: Settings → Display → Brightness level → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto-rotate screen (toggle ON)\n`;
     deviceContext += `- Do Not Disturb: Settings → Notifications → Do Not Disturb → toggle ON\n`;
     deviceContext += `- Battery saver: Settings → Battery → Battery Saver → Use Battery Saver → toggle ON\n`;
-  } else {
-    deviceContext += `\nNAVIGATION PATHS FOR THIS DEVICE (Android ${osVersion} on ${manufacturer}):\n`;
-    deviceContext += `- Bluetooth: Settings → Connected devices → Bluetooth → toggle ON\n`;
-    deviceContext += `- Wi-Fi: Settings → Network & internet → Wi-Fi → tap network\n`;
-    deviceContext += `- Volume: Settings → Sound → drag volume slider\n`;
+
+  } else if (isOnePlus) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · OxygenOS on Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
+    deviceContext += `- Wi-Fi: Settings → Wi-Fi & internet → Wi-Fi → toggle ON → tap network\n`;
+    deviceContext += `- Volume: Settings → Sound & vibration → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display & brightness → Brightness level → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display & brightness → Auto-rotate screen (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Notifications & status bar → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Battery saver → toggle ON\n`;
+
+  } else if (isMotorola) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · Android ${osVersion} — near-stock):\n`;
+    deviceContext += `- Bluetooth: Settings → Connected devices → Bluetooth → toggle ON → tap device\n`;
+    deviceContext += `- Wi-Fi: Settings → Network & internet → Wi-Fi → toggle ON → tap network\n`;
+    deviceContext += `- Volume: Settings → Sound → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display → Brightness level → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto-rotate screen (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Sound → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Battery Saver → toggle ON\n`;
+
+  } else if (isXiaomi) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · MIUI/HyperOS on Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
+    deviceContext += `- Wi-Fi: Settings → Wi-Fi → toggle ON → tap network name\n`;
+    deviceContext += `- Volume: Swipe down control panel, tap and hold volume icon → drag slider\n`;
     deviceContext += `- Brightness: Settings → Display → Brightness → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto-rotate screen (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Notifications & Control centre → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Battery saver → toggle ON\n`;
+
+  } else if (isOppo) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · ColorOS on Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
+    deviceContext += `- Wi-Fi: Settings → Wi-Fi → toggle ON → tap network name\n`;
+    deviceContext += `- Volume: Settings → Sound & vibration → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display & Brightness → Brightness → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display & Brightness → Auto rotate (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Notifications → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Power saving mode → toggle ON\n`;
+
+  } else if (isRealme) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · Realme UI on Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
+    deviceContext += `- Wi-Fi: Settings → Wi-Fi → toggle ON → tap network name\n`;
+    deviceContext += `- Volume: Settings → Sound & vibration → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display & Brightness → Brightness → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display & Brightness → Auto rotate (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Notifications → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Power saving → toggle ON\n`;
+
+  } else if (isVivo) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · FuntouchOS on Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
+    deviceContext += `- Wi-Fi: Settings → Wi-Fi → toggle ON → tap network name\n`;
+    deviceContext += `- Volume: Settings → Sound → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display → Brightness → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto rotate (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Notifications → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Ultra game mode → or Battery saver → toggle ON\n`;
+
+  } else if (isSony) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · Android ${osVersion} — near-stock):\n`;
+    deviceContext += `- Bluetooth: Settings → Device connection → Bluetooth → toggle ON → tap device\n`;
+    deviceContext += `- Wi-Fi: Settings → Network & internet → Wi-Fi → toggle ON → tap network\n`;
+    deviceContext += `- Volume: Settings → Sound → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display → Brightness level → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto-rotate screen (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Sound → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Battery saver → toggle ON\n`;
+
+  } else if (isNokia) {
+    deviceContext += `\nNAVIGATION PATHS (${model} · Android ${osVersion} — near-stock):\n`;
+    deviceContext += `- Bluetooth: Settings → Connected devices → Bluetooth → toggle ON → tap device\n`;
+    deviceContext += `- Wi-Fi: Settings → Network & internet → Wi-Fi → toggle ON → tap network\n`;
+    deviceContext += `- Volume: Settings → Sound → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display → Brightness level → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto-rotate screen (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Sound → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Battery saver → toggle ON\n`;
+
+  } else if (isHuawei || isHonor) {
+    const ui = isHuawei ? "EMUI/HarmonyOS" : "MagicUI";
+    deviceContext += `\nNAVIGATION PATHS (${model} · ${ui} on Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Bluetooth → toggle ON → tap device name\n`;
+    deviceContext += `- Wi-Fi: Settings → Wi-Fi → toggle ON → tap network name\n`;
+    deviceContext += `- Volume: Settings → Sounds → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display & brightness → Brightness → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display & brightness → Auto-rotate screen (toggle ON)\n`;
+    deviceContext += `- Do Not Disturb: Settings → Notifications → Do Not Disturb → toggle ON\n`;
+    deviceContext += `- Battery saver: Settings → Battery → Power saving mode → toggle ON\n`;
+
+  } else {
+    // Generic Android (Infinix, Tecno, HTC, ASUS, LG, etc.)
+    deviceContext += `\nNAVIGATION PATHS (${model} · Android ${osVersion}):\n`;
+    deviceContext += `- Bluetooth: Settings → Connected devices → Bluetooth → toggle ON → tap device\n`;
+    deviceContext += `- Wi-Fi: Settings → Network & internet → Wi-Fi → toggle ON → tap network\n`;
+    deviceContext += `- Volume: Settings → Sound → drag volume sliders\n`;
+    deviceContext += `- Brightness: Settings → Display → Brightness → drag slider\n`;
+    deviceContext += `- Auto-rotate: Settings → Display → Auto-rotate screen (toggle ON)\n`;
     deviceContext += `- Do Not Disturb: Settings → Sound → Do Not Disturb → toggle ON\n`;
     deviceContext += `- Battery saver: Settings → Battery → Battery Saver → toggle ON\n`;
   }

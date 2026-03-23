@@ -770,25 +770,41 @@ export function detectTopic(text: string): SettingTopic | null {
 /**
  * Scan a block of text for device/brand mentions and return the matching UiStyle.
  * Returns null if no device is mentioned.
+ *
+ * Priority order: Samsung → iOS → Pixel → other Android
  */
 export function detectUiStyleFromText(text: string): UiStyle | null {
   const t = text.toLowerCase();
-  // Samsung / One UI — check before generic android
+
+  // ── Samsung / One UI ──────────────────────────────────────────────────────
+  // Catch explicit brand/UI words AND common model shorthands users type
   if (
     t.includes("samsung") ||
     t.includes("galaxy") ||
-    t.includes("one ui")
+    t.includes("one ui") ||
+    // Galaxy S series (S20–S25) without brand prefix
+    /\bs2[0-5](\s*(ultra|plus|\+|fe|fe 5g))?\b/.test(t) ||
+    // Galaxy Z Fold / Z Flip
+    /\bz\s*(fold|flip)\s*\d*\b/.test(t) ||
+    // Galaxy Note series
+    /\bnote\s*(8|9|10|20)\b/.test(t) ||
+    // Galaxy A series (A12–A55) and M/F series
+    /\bgalaxy\s*[amf]\d{2}/.test(t)
   )
     return "samsung";
-  // Apple / iOS
+
+  // ── Apple / iOS ───────────────────────────────────────────────────────────
   if (
     t.includes("iphone") ||
+    t.includes("ipad") ||
+    t.includes("ipod") ||
     t.includes("ios") ||
-    t.includes("apple") ||
-    t.includes("ipad")
+    t.includes("apple phone") ||
+    t.includes("apple mobile")
   )
     return "ios";
-  // Google Pixel / stock Android
+
+  // ── Google Pixel / near-stock Android ────────────────────────────────────
   if (
     t.includes("pixel") ||
     t.includes("nexus") ||
@@ -796,7 +812,43 @@ export function detectUiStyleFromText(text: string): UiStyle | null {
     t.includes("android one")
   )
     return "pixel";
-  // Generic Android fallback
-  if (t.includes("android")) return "android";
+
+  // ── Other Android manufacturers → generic Android UI ─────────────────────
+  if (
+    t.includes("android") ||
+    // OnePlus / OxygenOS
+    t.includes("oneplus") || /\bone plus\b/.test(t) || /\bop\d+\b/.test(t) ||
+    // Motorola
+    t.includes("motorola") || /\bmoto\s+(g|e|edge|razr)\b/.test(t) ||
+    // Xiaomi / MIUI / HyperOS
+    t.includes("xiaomi") || t.includes("redmi") || t.includes("poco") ||
+    /\bmi\s+\d+\b/.test(t) ||
+    // Oppo / ColorOS
+    t.includes("oppo") || t.includes("find x") || t.includes("reno") ||
+    // Realme
+    t.includes("realme") ||
+    // Vivo / FuntouchOS
+    t.includes("vivo") ||
+    // Nokia
+    t.includes("nokia") ||
+    // Sony Xperia
+    t.includes("sony") || t.includes("xperia") ||
+    // ASUS / ZenUI / ROG
+    t.includes("asus") || t.includes("zenfone") || /\brog phone\b/.test(t) ||
+    // Nothing Phone
+    /\bnothing phone\b/.test(t) ||
+    // Huawei / EMUI / HarmonyOS
+    t.includes("huawei") || t.includes("honor") ||
+    // LG (discontinued but still in use)
+    /\blg\s+(g\d|v\d|k\d|velvet|wing)\b/.test(t) ||
+    // HTC
+    t.includes("htc") ||
+    // Infinix / Tecno / itel (popular in Asia/Africa)
+    t.includes("infinix") || t.includes("tecno") || t.includes("itel") ||
+    // Generic fallback
+    t.includes("android phone") || t.includes("my phone") === false && t.includes("smartphone")
+  )
+    return "android";
+
   return null;
 }

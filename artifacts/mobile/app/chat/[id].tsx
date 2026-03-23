@@ -66,24 +66,80 @@ function deriveTitle(text: string): string {
 // ─── Extract a human-readable device label from text ─────────────────────────
 function extractDeviceLabel(text: string, style: UiStyle): string {
   if (style === "samsung") {
-    const m = text.match(/samsung\s+galaxy\s+[a-z]\d+\s*(?:ultra|plus|\+|fe)?/i);
-    if (m) return m[0].replace(/\s+/g, " ").trim();
-    const m2 = text.match(/galaxy\s+[a-z]\d+\s*(?:ultra|plus|\+|fe)?/i);
-    if (m2) return `Samsung ${m2[0].replace(/\s+/g, " ").trim()}`;
+    // Full "Samsung Galaxy S24 Ultra" style
+    const full = text.match(/samsung\s+galaxy\s+(?:s\d+|a\d+|m\d+|z\s*(?:fold|flip)\s*\d*|note\s*\d+)\s*(?:ultra|plus|\+|fe(?:\s*5g)?)?/i);
+    if (full) return full[0].replace(/\s+/g, " ").trim();
+    // "Galaxy S24" / "Galaxy Z Fold 5" without Samsung prefix
+    const galaxy = text.match(/galaxy\s+(?:s\d+|a\d+|m\d+|z\s*(?:fold|flip)\s*\d*|note\s*\d+)\s*(?:ultra|plus|\+|fe(?:\s*5g)?)?/i);
+    if (galaxy) return `Samsung ${galaxy[0].replace(/\s+/g, " ").trim()}`;
+    // Shorthand "S24 Ultra" / "Z Fold 5" / "Note 20"
+    const short = text.match(/(?:s2[0-5]|z\s*(?:fold|flip)\s*\d*|note\s*(?:8|9|10|20))\s*(?:ultra|plus|\+|fe)?/i);
+    if (short) return `Samsung Galaxy ${short[0].replace(/\s+/g, " ").trim()}`;
+    if (/galaxy\s+tab/i.test(text)) return "Samsung Galaxy Tab";
     if (/galaxy/i.test(text)) return "Samsung Galaxy";
     return "Samsung Phone";
   }
   if (style === "ios") {
-    const m = text.match(/iphone\s+\d+\s*(?:pro\s*(?:max)?|plus|mini)?/i);
-    if (m) return m[0].replace(/\s+/g, " ").trim();
+    const iphone = text.match(/iphone\s+\d+\s*(?:pro\s*(?:max)?|plus|mini)?/i);
+    if (iphone) return iphone[0].replace(/\s+/g, " ").trim();
+    const ipad = text.match(/ipad\s*(?:pro|air|mini)?\s*(?:\d+)?/i);
+    if (ipad) return ipad[0].replace(/\s+/g, " ").trim();
     return "iPhone";
   }
   if (style === "pixel") {
-    const m = text.match(/(?:google\s+)?pixel\s+\d+[a-z]?\s*(?:pro|xl)?/i);
-    if (m) return m[0].replace(/\s+/g, " ").trim();
+    const pixel = text.match(/(?:google\s+)?pixel\s+\d+[a-z]?\s*(?:pro\s*(?:xl)?|xl|a)?/i);
+    if (pixel) return pixel[0].replace(/\s+/g, " ").trim();
     return "Google Pixel";
   }
+  // style === "android" — try to extract a brand+model label
+  const patterns: [RegExp, string][] = [
+    [/oneplus\s+\d+\s*(?:pro|ultra|t)?/i, "OnePlus"],
+    [/one\s+plus\s+\d+\s*(?:pro|ultra|t)?/i, "OnePlus"],
+    [/motorola\s+(?:edge|razr|moto)\s*[\w\s]*/i, "Motorola"],
+    [/moto\s+[gem]\s*\d+\s*(?:plus|\+|power|play)?/i, "Motorola"],
+    [/xiaomi\s+\d+\s*(?:pro|ultra|t)?/i, "Xiaomi"],
+    [/redmi\s+(?:note\s+)?\d+\s*(?:pro|\+)?/i, "Xiaomi"],
+    [/poco\s+[a-z]\d+\s*(?:pro|gt)?/i, "Xiaomi"],
+    [/oppo\s+(?:reno|find\s*x|a|f)\s*[\w\s]*/i, "Oppo"],
+    [/realme\s+[\w\s]*/i, "Realme"],
+    [/vivo\s+[vyx]\d+\s*(?:pro)?/i, "Vivo"],
+    [/nokia\s+[gxc]?\d+\s*(?:plus|\+)?/i, "Nokia"],
+    [/(?:sony\s+)?xperia\s+[\d\w]+\s*(?:v|iv|iii|ii)?/i, "Sony"],
+    [/asus\s+zenfone\s+\d+\s*(?:ultra)?/i, "ASUS"],
+    [/rog\s+phone\s+\d+/i, "ASUS"],
+    [/nothing\s+phone\s+(?:\d+|two|one)/i, "Nothing"],
+    [/huawei\s+[pm]\d+\s*(?:pro|ultra)?/i, "Huawei"],
+    [/honor\s+\d+\s*(?:pro|magic)?/i, "Honor"],
+    [/infinix\s+(?:note|hot|zero)\s*\d+/i, "Infinix"],
+    [/tecno\s+(?:camon|spark|pop)\s*\d+/i, "Tecno"],
+  ];
+  for (const [re, brand] of patterns) {
+    const m = text.match(re);
+    if (m) return `${brand} ${m[0].replace(new RegExp(brand, "i"), "").replace(/\s+/g, " ").trim()}`.trim();
+  }
   return "Android Phone";
+}
+
+// ─── Infer manufacturer name from free text for synthetic payloads ────────────
+function inferManufacturer(text: string): string {
+  const t = text.toLowerCase();
+  if (t.includes("oneplus") || /one plus/.test(t)) return "OnePlus";
+  if (t.includes("motorola") || /moto /.test(t)) return "Motorola";
+  if (t.includes("xiaomi")) return "Xiaomi";
+  if (t.includes("redmi") || t.includes("poco")) return "Xiaomi";
+  if (t.includes("oppo")) return "Oppo";
+  if (t.includes("realme")) return "Realme";
+  if (t.includes("vivo")) return "Vivo";
+  if (t.includes("nokia")) return "Nokia";
+  if (t.includes("sony") || t.includes("xperia")) return "Sony";
+  if (t.includes("asus") || t.includes("zenfone") || t.includes("rog phone")) return "ASUS";
+  if (t.includes("nothing phone")) return "Nothing";
+  if (t.includes("huawei")) return "Huawei";
+  if (t.includes("honor")) return "Honor";
+  if (t.includes("infinix")) return "Infinix";
+  if (t.includes("tecno")) return "Tecno";
+  if (t.includes("htc")) return "HTC";
+  return "Android";
 }
 
 // ─── Synthetic device payload for a given UI style ───────────────────────────
@@ -95,8 +151,11 @@ function syntheticDevicePayload(style: UiStyle, mentionedLabel: string) {
       return { model: mentionedLabel, manufacturer: "Apple", osName: "iOS", osVersion: "17" };
     case "pixel":
       return { model: mentionedLabel, manufacturer: "Google", osName: "Android", osVersion: "14" };
-    default:
-      return { model: mentionedLabel, manufacturer: "Android", osName: "Android", osVersion: "13" };
+    default: {
+      // For generic android, infer the actual manufacturer from the label text
+      const mfg = inferManufacturer(mentionedLabel);
+      return { model: mentionedLabel, manufacturer: mfg, osName: "Android", osVersion: "14" };
+    }
   }
 }
 
