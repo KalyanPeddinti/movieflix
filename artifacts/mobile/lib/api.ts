@@ -50,6 +50,17 @@ export async function createConversation(title: string): Promise<Conversation> {
   return res.json();
 }
 
+export async function updateConversationTitle(
+  id: number,
+  title: string
+): Promise<void> {
+  await fetch(`${getApiUrl()}api/gemini/conversations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+}
+
 export async function deleteConversation(id: number): Promise<void> {
   const res = await fetch(`${getApiUrl()}api/gemini/conversations/${id}`, {
     method: "DELETE",

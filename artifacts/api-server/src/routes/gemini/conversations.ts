@@ -53,6 +53,30 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+router.patch("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { title } = req.body as { title?: string };
+    if (!title || typeof title !== "string" || !title.trim()) {
+      res.status(400).json({ error: "Invalid title" });
+      return;
+    }
+    const [updated] = await db
+      .update(conversations)
+      .set({ title: title.trim() })
+      .where(eq(conversations.id, id))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update conversation");
+    res.status(500).json({ error: "Failed to update conversation" });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);

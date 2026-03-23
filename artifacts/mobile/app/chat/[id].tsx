@@ -37,7 +37,7 @@ import AgentActionBar from "@/components/AgentActionBar";
 import VisualGuideSheet from "@/components/VisualGuideSheet";
 import Colors from "@/constants/colors";
 import { detectTopic, getGuideForDevice, detectUiStyleFromText } from "@/constants/settingsGuides";
-import { streamMessage, fetchConversation, translateMessages } from "@/lib/api";
+import { streamMessage, fetchConversation, translateMessages, updateConversationTitle } from "@/lib/api";
 import { getDeviceInfo, describeDevice, toApiPayload } from "@/lib/deviceInfo";
 import type { UiStyle } from "@/lib/deviceInfo";
 
@@ -46,6 +46,21 @@ let msgCounter = 0;
 function genId(): string {
   msgCounter++;
   return `m-${Date.now()}-${msgCounter}-${Math.random().toString(36).substr(2, 6)}`;
+}
+
+// ─── Derive a smart session title from the user's first message ───────────────
+function deriveTitle(text: string): string {
+  // Strip common filler prefixes
+  let t = text
+    .replace(/^(help me|how do i|how to|can you help me|please help me|i want to|i need to|please|i have a .+ phone\.?\s*)/i, "")
+    .trim();
+  // Capitalise first letter of each word for short results, else title-case first word
+  const words = t.split(/\s+/).filter(Boolean);
+  const titled = words
+    .slice(0, 5)
+    .map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
+  return titled.length > 2 ? titled : text.slice(0, 30);
 }
 
 // ─── Extract a human-readable device label from text ─────────────────────────
@@ -496,7 +511,7 @@ export default function ChatScreen() {
 
   // ─── Core streaming send (used after conflict is resolved or no conflict) ─────
   const doStreamSend = useCallback(
-    async (trimmed: string, activeDevicePayload: typeof devicePayload) => {
+    async (trimmed: string, activeDevicePayload: typeof devicePayload, isFirstMessage = false) => {
       const userMsg: LocalMessage = { id: genId(), role: "user", content: trimmed };
       setMessages((prev) => [...prev, userMsg]);
       setIsStreaming(true);
@@ -536,6 +551,13 @@ export default function ChatScreen() {
           activeDevicePayload,
           selectedLang
         );
+
+        // Auto-title: after the first exchange, derive a meaningful session name
+        if (isFirstMessage) {
+          const newTitle = deriveTitle(trimmed);
+          setTitle(newTitle);
+          updateConversationTitle(convId, newTitle).catch(() => {});
+        }
       } catch {
         setShowTyping(false);
         if (!assistantAdded) {
@@ -580,9 +602,9 @@ export default function ChatScreen() {
       const activePayload = chosenUiStyle
         ? syntheticDevicePayload(chosenUiStyle, deviceInfo.model)
         : devicePayload;
-      await doStreamSend(trimmed, activePayload);
+      await doStreamSend(trimmed, activePayload, messages.length === 0);
     },
-    [convId, isStreaming, isListening, stopListening, selectedLang, deviceInfo, chosenUiStyle, devicePayload, doStreamSend]
+    [convId, isStreaming, isListening, stopListening, selectedLang, deviceInfo, chosenUiStyle, devicePayload, doStreamSend, messages]
   );
 
   // ─── Conflict resolution: user picked which device to use ───────────────────
@@ -599,9 +621,9 @@ export default function ChatScreen() {
           ? devicePayload
           : syntheticDevicePayload(mentionedStyle, mentionedLabel);
 
-      await doStreamSend(savedMessage, activePayload);
+      await doStreamSend(savedMessage, activePayload, messages.length === 0);
     },
-    [pendingConflict, deviceInfo, devicePayload, doStreamSend]
+    [pendingConflict, deviceInfo, devicePayload, doStreamSend, messages]
   );
 
   const reversed = [...messages].reverse();
