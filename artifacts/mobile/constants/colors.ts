@@ -10,6 +10,7 @@ const textSecondary = "#6B7B8D";
 const textLight = "#FFFFFF";
 const success = "#2ECC71";
 const danger = "#E74C3C";
+const warning = "#F39C12";
 const border = "#E4EAF0";
 const borderDark = "#243447";
 
@@ -19,6 +20,7 @@ export default {
   accent,
   success,
   danger,
+  warning,
   light: {
     text: textPrimary,
     textSecondary,

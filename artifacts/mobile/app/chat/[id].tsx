@@ -39,12 +39,50 @@ import Colors from "@/constants/colors";
 import { detectTopic, getGuideForDevice, detectUiStyleFromText } from "@/constants/settingsGuides";
 import { streamMessage, fetchConversation, translateMessages } from "@/lib/api";
 import { getDeviceInfo, describeDevice, toApiPayload } from "@/lib/deviceInfo";
+import type { UiStyle } from "@/lib/deviceInfo";
 
 // ─── unique ID generator ──────────────────────────────────────────────────────
 let msgCounter = 0;
 function genId(): string {
   msgCounter++;
   return `m-${Date.now()}-${msgCounter}-${Math.random().toString(36).substr(2, 6)}`;
+}
+
+// ─── Extract a human-readable device label from text ─────────────────────────
+function extractDeviceLabel(text: string, style: UiStyle): string {
+  if (style === "samsung") {
+    const m = text.match(/samsung\s+galaxy\s+[a-z]\d+\s*(?:ultra|plus|\+|fe)?/i);
+    if (m) return m[0].replace(/\s+/g, " ").trim();
+    const m2 = text.match(/galaxy\s+[a-z]\d+\s*(?:ultra|plus|\+|fe)?/i);
+    if (m2) return `Samsung ${m2[0].replace(/\s+/g, " ").trim()}`;
+    if (/galaxy/i.test(text)) return "Samsung Galaxy";
+    return "Samsung Phone";
+  }
+  if (style === "ios") {
+    const m = text.match(/iphone\s+\d+\s*(?:pro\s*(?:max)?|plus|mini)?/i);
+    if (m) return m[0].replace(/\s+/g, " ").trim();
+    return "iPhone";
+  }
+  if (style === "pixel") {
+    const m = text.match(/(?:google\s+)?pixel\s+\d+[a-z]?\s*(?:pro|xl)?/i);
+    if (m) return m[0].replace(/\s+/g, " ").trim();
+    return "Google Pixel";
+  }
+  return "Android Phone";
+}
+
+// ─── Synthetic device payload for a given UI style ───────────────────────────
+function syntheticDevicePayload(style: UiStyle, mentionedLabel: string) {
+  switch (style) {
+    case "samsung":
+      return { model: mentionedLabel, manufacturer: "Samsung", osName: "Android", osVersion: "14" };
+    case "ios":
+      return { model: mentionedLabel, manufacturer: "Apple", osName: "iOS", osVersion: "17" };
+    case "pixel":
+      return { model: mentionedLabel, manufacturer: "Google", osName: "Android", osVersion: "14" };
+    default:
+      return { model: mentionedLabel, manufacturer: "Android", osName: "Android", osVersion: "13" };
+  }
 }
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -326,6 +364,16 @@ export default function ChatScreen() {
   const [guideVisible, setGuideVisible] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
 
+  // ── Device conflict resolution ──────────────────────────────────────────────
+  // chosenUiStyle: the user's explicit pick after a conflict
+  const [chosenUiStyle, setChosenUiStyle] = useState<UiStyle | null>(null);
+  // pendingConflict: filled when a new message mentions a different device
+  const [pendingConflict, setPendingConflict] = useState<{
+    mentionedStyle: UiStyle;
+    mentionedLabel: string;
+    savedMessage: string;     // the message waiting to be sent
+  } | null>(null);
+
   // Get device info once
   const deviceInfo = useMemo(() => getDeviceInfo(), []);
   const devicePayload = useMemo(() => toApiPayload(deviceInfo), [deviceInfo]);
@@ -362,8 +410,8 @@ export default function ChatScreen() {
     return detectUiStyleFromText(title);
   }, [messages, initialPrompt, title]);
 
-  // Use conversation-mentioned device style; fall back to auto-detected device
-  const effectiveUiStyle = mentionedUiStyle ?? deviceInfo.uiStyle;
+  // Priority: user's explicit choice > mentioned in chat > auto-detected device
+  const effectiveUiStyle = chosenUiStyle ?? mentionedUiStyle ?? deviceInfo.uiStyle;
 
   const settingsGuide = useMemo(
     () => settingTopic ? getGuideForDevice(settingTopic, effectiveUiStyle) : null,
@@ -446,14 +494,9 @@ export default function ChatScreen() {
     [messages, isStreaming, isTranslating]
   );
 
-  const handleSend = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || isStreaming) return;
-      if (isListening) stopListening();
-      setInput("");
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
+  // ─── Core streaming send (used after conflict is resolved or no conflict) ─────
+  const doStreamSend = useCallback(
+    async (trimmed: string, activeDevicePayload: typeof devicePayload) => {
       const userMsg: LocalMessage = { id: genId(), role: "user", content: trimmed };
       setMessages((prev) => [...prev, userMsg]);
       setIsStreaming(true);
@@ -490,7 +533,7 @@ export default function ChatScreen() {
               ]);
             }
           },
-          devicePayload,
+          activeDevicePayload,
           selectedLang
         );
       } catch {
@@ -506,7 +549,59 @@ export default function ChatScreen() {
         setShowTyping(false);
       }
     },
-    [convId, isStreaming, isListening, stopListening, selectedLang]
+    [convId, selectedLang]
+  );
+
+  // ─── handleSend: detects conflict, pauses if needed ─────────────────────────
+  const handleSend = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || isStreaming) return;
+      if (isListening) stopListening();
+      setInput("");
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Only check for conflict when device is real (not web) and not already resolved
+      if (deviceInfo.isDetected) {
+        const mentionedStyle = detectUiStyleFromText(trimmed);
+        const hasConflict =
+          mentionedStyle !== null &&
+          mentionedStyle !== deviceInfo.uiStyle &&
+          mentionedStyle !== chosenUiStyle; // don't re-ask if already resolved
+
+        if (hasConflict) {
+          const mentionedLabel = extractDeviceLabel(trimmed, mentionedStyle);
+          setPendingConflict({ mentionedStyle, mentionedLabel, savedMessage: trimmed });
+          return; // pause — wait for user to choose
+        }
+      }
+
+      // No conflict — send immediately using current effective device payload
+      const activePayload = chosenUiStyle
+        ? syntheticDevicePayload(chosenUiStyle, deviceInfo.model)
+        : devicePayload;
+      await doStreamSend(trimmed, activePayload);
+    },
+    [convId, isStreaming, isListening, stopListening, selectedLang, deviceInfo, chosenUiStyle, devicePayload, doStreamSend]
+  );
+
+  // ─── Conflict resolution: user picked which device to use ───────────────────
+  const handleConflictChoice = useCallback(
+    async (resolvedStyle: UiStyle) => {
+      if (!pendingConflict) return;
+      const { mentionedStyle, mentionedLabel, savedMessage } = pendingConflict;
+
+      setChosenUiStyle(resolvedStyle);
+      setPendingConflict(null);
+
+      const activePayload =
+        resolvedStyle === deviceInfo.uiStyle
+          ? devicePayload
+          : syntheticDevicePayload(mentionedStyle, mentionedLabel);
+
+      await doStreamSend(savedMessage, activePayload);
+    },
+    [pendingConflict, deviceInfo, devicePayload, doStreamSend]
   );
 
   const reversed = [...messages].reverse();
@@ -627,6 +722,89 @@ export default function ChatScreen() {
             ) : null
           }
         />
+
+        {/* ── Device conflict resolution card ────────────────────────────── */}
+        {pendingConflict && deviceInfo.isDetected && (
+          <Animated.View
+            entering={FadeInDown.springify().damping(18)}
+            style={[
+              styles.conflictCard,
+              {
+                backgroundColor: isDark ? Colors.dark.surface : "#FFFBF0",
+                borderColor: Colors.warning,
+              },
+            ]}
+          >
+            {/* Icon + dismiss row */}
+            <View style={styles.conflictHeader}>
+              <View style={styles.conflictIconWrap}>
+                <Ionicons name="alert-circle" size={20} color={Colors.warning} />
+              </View>
+              <Text style={[styles.conflictTitle, { color: colors.text, fontFamily: "Inter_700Bold" }]}>
+                Different phone mentioned
+              </Text>
+              <Pressable
+                onPress={() => {
+                  // Restore the saved message to input on dismiss
+                  setInput(pendingConflict.savedMessage);
+                  setPendingConflict(null);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <Ionicons name="close" size={18} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            {/* Description */}
+            <Text style={[styles.conflictBody, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Your phone is{" "}
+              <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.text }}>
+                {deviceInfo.model} ({deviceInfo.osName} {deviceInfo.osVersion})
+              </Text>
+              , but you mentioned a{" "}
+              <Text style={{ fontFamily: "Inter_600SemiBold", color: colors.text }}>
+                {pendingConflict.mentionedLabel}
+              </Text>
+              .{"\n"}Which device should I give instructions for?
+            </Text>
+
+            {/* Choice buttons */}
+            <View style={styles.conflictBtns}>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleConflictChoice(deviceInfo.uiStyle); }}
+                style={({ pressed }) => [
+                  styles.conflictBtn,
+                  styles.conflictBtnPrimary,
+                  { backgroundColor: Colors.primary, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Ionicons name="phone-portrait" size={14} color="#fff" />
+                <Text style={[styles.conflictBtnText, { fontFamily: "Inter_600SemiBold", color: "#fff" }]} numberOfLines={1}>
+                  My {deviceInfo.model}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleConflictChoice(pendingConflict.mentionedStyle); }}
+                style={({ pressed }) => [
+                  styles.conflictBtn,
+                  styles.conflictBtnSecondary,
+                  {
+                    backgroundColor: isDark ? Colors.dark.background : "#FFF",
+                    borderColor: Colors.warning,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="swap-horizontal" size={14} color={Colors.warning} />
+                <Text style={[styles.conflictBtnText, { fontFamily: "Inter_600SemiBold", color: Colors.warning }]} numberOfLines={1}>
+                  {pendingConflict.mentionedLabel}
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Input area */}
         <View
@@ -887,5 +1065,58 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+  // ── Conflict card ──────────────────────────────────────────────────────────
+  conflictCard: {
+    marginHorizontal: 14,
+    marginBottom: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 14,
+    gap: 10,
+  },
+  conflictHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  conflictIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: `${Colors.warning}20`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  conflictTitle: {
+    flex: 1,
+    fontSize: 14,
+  },
+  conflictBody: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  conflictBtns: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  conflictBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  conflictBtnPrimary: {
+    // backgroundColor set inline
+  },
+  conflictBtnSecondary: {
+    borderWidth: 1.5,
+  },
+  conflictBtnText: {
+    fontSize: 13,
   },
 });
