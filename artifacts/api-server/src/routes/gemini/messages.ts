@@ -9,7 +9,7 @@ import { Router } from "express";
 
 const router = Router();
 
-const BASE_SYSTEM_PROMPT = `You are ElderAssist, a warm, patient, and helpful phone settings assistant designed specifically for elderly users who may not be familiar with modern smartphones.
+const BASE_SYSTEM_PROMPT = `You are PhoneAssist, a warm, patient, and helpful phone settings assistant designed specifically for elderly users who may not be familiar with modern smartphones.
 
 Your role is to help users change phone settings by providing VERY clear, step-by-step instructions. When a user asks you to help with a phone setting (like connecting Bluetooth, adjusting brightness, changing volume, enabling Wi-Fi, etc.), you should:
 
@@ -162,7 +162,7 @@ router.post("/:id/messages", async (req, res) => {
         { role: "user", parts: [{ text: systemPrompt }] },
         {
           role: "model",
-          parts: [{ text: "Understood! I'm ElderAssist, ready to help you with your specific phone settings in a clear, step-by-step way." }],
+          parts: [{ text: "Understood! I'm PhoneAssist, ready to help you with your specific phone settings in a clear, step-by-step way." }],
         },
         ...allMessages.map((m) => ({
           role: m.role === "assistant" ? ("model" as const) : ("user" as const),

@@ -290,7 +290,7 @@ export default function HomeScreen() {
               { color: colors.text, fontFamily: "Inter_700Bold" },
             ]}
           >
-            ElderAssist
+            PhoneAssist
           </Text>
           <Text
             style={[

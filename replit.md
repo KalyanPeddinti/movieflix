@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. ElderAssist is a mobile app that uses Gemini AI to help elderly users change phone settings via voice/text instructions. The AI gives clear, numbered, step-by-step guidance.
+pnpm workspace monorepo using TypeScript. PhoneAssist is a mobile app that uses Gemini AI to help elderly users change phone settings via voice/text instructions. The AI gives clear, numbered, step-by-step guidance.
 
 ## Stack
 
@@ -24,7 +24,7 @@ pnpm workspace monorepo using TypeScript. ElderAssist is a mobile app that uses 
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
 │   ├── api-server/         # Express API server
-│   └── mobile/             # Expo mobile app (ElderAssist)
+│   └── mobile/             # Expo mobile app (PhoneAssist)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks

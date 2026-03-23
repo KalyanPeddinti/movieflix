@@ -358,7 +358,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
-  const [title, setTitle] = useState("ElderAssist");
+  const [title, setTitle] = useState("PhoneAssist");
   const [initialSent, setInitialSent] = useState(false);
   const [selectedLang, setSelectedLang] = useState<LangCode>("en-US");
   const [guideVisible, setGuideVisible] = useState(false);
