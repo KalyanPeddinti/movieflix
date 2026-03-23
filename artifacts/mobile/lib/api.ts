@@ -51,12 +51,20 @@ export async function fetchConversation(
   return res.json();
 }
 
+export interface DeviceInfoPayload {
+  model: string;
+  manufacturer: string;
+  osName: string;
+  osVersion: string;
+}
+
 export async function streamMessage(
   conversationId: number,
   content: string,
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  deviceInfo?: DeviceInfoPayload
 ): Promise<void> {
   const response = await fetch(
     `${getApiUrl()}api/gemini/conversations/${conversationId}/messages`,
@@ -66,7 +74,7 @@ export async function streamMessage(
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, deviceInfo }),
     }
   );
 

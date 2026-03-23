@@ -36,8 +36,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AgentActionBar from "@/components/AgentActionBar";
 import VisualGuideSheet from "@/components/VisualGuideSheet";
 import Colors from "@/constants/colors";
-import { SETTINGS_GUIDES, detectTopic } from "@/constants/settingsGuides";
+import { detectTopic, getGuideForDevice } from "@/constants/settingsGuides";
 import { streamMessage, fetchConversation } from "@/lib/api";
+import { getDeviceInfo, describeDevice, toApiPayload } from "@/lib/deviceInfo";
 
 // ─── unique ID generator ──────────────────────────────────────────────────────
 let msgCounter = 0;
@@ -324,6 +325,10 @@ export default function ChatScreen() {
   const [selectedLang, setSelectedLang] = useState<LangCode>("en-US");
   const [guideVisible, setGuideVisible] = useState(false);
 
+  // Get device info once
+  const deviceInfo = useMemo(() => getDeviceInfo(), []);
+  const devicePayload = useMemo(() => toApiPayload(deviceInfo), [deviceInfo]);
+
   const inputRef = useRef<TextInput>(null);
   const { isListening, transcript, startListening, stopListening } = useVoiceInput(selectedLang);
 
@@ -332,7 +337,10 @@ export default function ChatScreen() {
     () => detectTopic(initialPrompt ?? title),
     [initialPrompt, title]
   );
-  const settingsGuide = settingTopic ? SETTINGS_GUIDES[settingTopic] : null;
+  const settingsGuide = useMemo(
+    () => settingTopic ? getGuideForDevice(settingTopic, deviceInfo.uiStyle) : null,
+    [settingTopic, deviceInfo.uiStyle]
+  );
 
   // Load existing conversation
   useEffect(() => {
@@ -419,7 +427,8 @@ export default function ChatScreen() {
                 { id: genId(), role: "assistant", content: "I'm sorry, I had trouble responding. Please try again." },
               ]);
             }
-          }
+          },
+          devicePayload
         );
       } catch {
         setShowTyping(false);
@@ -468,9 +477,18 @@ export default function ChatScreen() {
           <Text style={[styles.headerTitle, { color: colors.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={[styles.headerSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
-            Phone Settings Helper
-          </Text>
+          {deviceInfo.isDetected ? (
+            <View style={styles.deviceBadge}>
+              <Ionicons name="phone-portrait-outline" size={10} color={Colors.success} />
+              <Text style={[styles.deviceBadgeText, { color: Colors.success, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                {deviceInfo.model} · {deviceInfo.osName} {deviceInfo.osVersion}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.headerSub, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Phone Settings Helper
+            </Text>
+          )}
         </View>
         {/* Visual guide shortcut in header */}
         {settingsGuide && (
@@ -640,6 +658,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17 },
   headerSub: { fontSize: 12, marginTop: 1 },
+  deviceBadge: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
+  deviceBadgeText: { fontSize: 10 },
   guideHeaderBtn: {
     width: 36,
     height: 36,

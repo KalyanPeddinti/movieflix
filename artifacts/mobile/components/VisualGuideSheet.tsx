@@ -14,6 +14,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import type { SettingTopic, SettingsGuide } from "@/constants/settingsGuides";
 import PhoneScreenMockup from "./PhoneScreenMockup";
+import type { UiStyle } from "@/lib/deviceInfo";
 
 interface Props {
   guide: SettingsGuide;
@@ -127,7 +128,7 @@ export default function VisualGuideSheet({ guide, visible, onClose }: Props) {
             entering={FadeInUp.delay(100).springify()}
             style={styles.mockupWrap}
           >
-            <PhoneScreenMockup screen={step} />
+            <PhoneScreenMockup screen={step} uiStyle={guide.uiStyle} />
           </Animated.View>
 
           {/* Tap hint */}
