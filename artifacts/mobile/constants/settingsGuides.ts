@@ -673,3 +673,37 @@ export function detectTopic(text: string): SettingTopic | null {
   if (t.includes("battery") || t.includes("power saver") || t.includes("low power")) return "battery";
   return null;
 }
+
+/**
+ * Scan a block of text for device/brand mentions and return the matching UiStyle.
+ * Returns null if no device is mentioned.
+ */
+export function detectUiStyleFromText(text: string): UiStyle | null {
+  const t = text.toLowerCase();
+  // Samsung / One UI — check before generic android
+  if (
+    t.includes("samsung") ||
+    t.includes("galaxy") ||
+    t.includes("one ui")
+  )
+    return "samsung";
+  // Apple / iOS
+  if (
+    t.includes("iphone") ||
+    t.includes("ios") ||
+    t.includes("apple") ||
+    t.includes("ipad")
+  )
+    return "ios";
+  // Google Pixel / stock Android
+  if (
+    t.includes("pixel") ||
+    t.includes("nexus") ||
+    t.includes("google phone") ||
+    t.includes("android one")
+  )
+    return "pixel";
+  // Generic Android fallback
+  if (t.includes("android")) return "android";
+  return null;
+}

@@ -36,7 +36,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AgentActionBar from "@/components/AgentActionBar";
 import VisualGuideSheet from "@/components/VisualGuideSheet";
 import Colors from "@/constants/colors";
-import { detectTopic, getGuideForDevice } from "@/constants/settingsGuides";
+import { detectTopic, getGuideForDevice, detectUiStyleFromText } from "@/constants/settingsGuides";
 import { streamMessage, fetchConversation, translateMessages } from "@/lib/api";
 import { getDeviceInfo, describeDevice, toApiPayload } from "@/lib/deviceInfo";
 
@@ -333,14 +333,41 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const { isListening, transcript, startListening, stopListening } = useVoiceInput(selectedLang);
 
-  // Detect setting topic from initial prompt or conversation title
-  const settingTopic = useMemo(
-    () => detectTopic(initialPrompt ?? title),
-    [initialPrompt, title]
-  );
+  // Detect setting topic — scan messages first, then fall back to title/prompt
+  const settingTopic = useMemo(() => {
+    // Scan all message content for a topic
+    for (const msg of messages) {
+      const t = detectTopic(msg.content);
+      if (t) return t;
+    }
+    return detectTopic(initialPrompt ?? title);
+  }, [messages, initialPrompt, title]);
+
+  // Detect which device/brand was mentioned in the conversation so the visual
+  // guide matches what the AI is describing — NOT the device running the app.
+  const mentionedUiStyle = useMemo(() => {
+    // Check most recent user messages first (most explicit signal),
+    // then most recent assistant messages as a secondary signal.
+    const userMsgs = [...messages].filter((m) => m.role === "user").reverse();
+    const assistantMsgs = [...messages].filter((m) => m.role === "assistant").reverse();
+    for (const msg of [...userMsgs, ...assistantMsgs]) {
+      const style = detectUiStyleFromText(msg.content);
+      if (style) return style;
+    }
+    // Also check the initial prompt / title
+    if (initialPrompt) {
+      const style = detectUiStyleFromText(initialPrompt);
+      if (style) return style;
+    }
+    return detectUiStyleFromText(title);
+  }, [messages, initialPrompt, title]);
+
+  // Use conversation-mentioned device style; fall back to auto-detected device
+  const effectiveUiStyle = mentionedUiStyle ?? deviceInfo.uiStyle;
+
   const settingsGuide = useMemo(
-    () => settingTopic ? getGuideForDevice(settingTopic, deviceInfo.uiStyle) : null,
-    [settingTopic, deviceInfo.uiStyle]
+    () => settingTopic ? getGuideForDevice(settingTopic, effectiveUiStyle) : null,
+    [settingTopic, effectiveUiStyle]
   );
 
   // Load existing conversation
