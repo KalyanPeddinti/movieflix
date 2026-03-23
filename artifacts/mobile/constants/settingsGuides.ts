@@ -6,7 +6,8 @@ export type SettingTopic =
   | "volume"
   | "brightness"
   | "silent"
-  | "battery";
+  | "battery"
+  | "rotate";
 
 export interface MockupItem {
   icon: string;
@@ -229,6 +230,36 @@ const IOS_GUIDES: Record<SettingTopic, Omit<SettingsGuide, "uiStyle">> = {
       },
     ],
   },
+  rotate: {
+    topic: "rotate",
+    heading: "Auto-Rotate Screen (iPhone)",
+    steps: [
+      {
+        title: "Control Centre",
+        showBack: false,
+        items: [
+          { icon: "phone-landscape", label: "Rotation Lock", detail: "Swipe down from top-right corner", hasToggle: true, toggleOn: true, isHighlighted: true },
+          { icon: "wifi", label: "Wi-Fi & Bluetooth", detail: "Tap to toggle" },
+          { icon: "moon", label: "Focus / Do Not Disturb", detail: "Tap to enable" },
+          { icon: "contrast", label: "Display & Brightness", detail: "Hold for options" },
+        ],
+        highlightedIndex: 0,
+        caption: "Swipe down from the top-right corner of the screen to open Control Centre",
+      },
+      {
+        title: "Control Centre",
+        showBack: false,
+        items: [
+          { icon: "phone-landscape", label: "Rotation Lock", detail: "Tap to unlock rotation", hasToggle: true, toggleOn: false, isHighlighted: true },
+          { icon: "wifi", label: "Wi-Fi & Bluetooth", detail: "Tap to toggle" },
+          { icon: "moon", label: "Focus / Do Not Disturb", detail: "Off" },
+          { icon: "contrast", label: "Display & Brightness", detail: "Hold for options" },
+        ],
+        highlightedIndex: 0,
+        caption: 'Tap the Rotation Lock icon (lock with a circular arrow). When unlocked, auto-rotate turns ON',
+      },
+    ],
+  },
 };
 
 // ─── Samsung One UI guide data ────────────────────────────────────────────────
@@ -438,6 +469,31 @@ const SAMSUNG_GUIDES: Record<SettingTopic, Omit<SettingsGuide, "uiStyle">> = {
       },
     ],
   },
+  rotate: {
+    topic: "rotate",
+    heading: "Auto Rotate (Samsung)",
+    steps: [
+      {
+        title: "Settings",
+        showSearch: true,
+        items: SAMSUNG_MAIN.map((it, i) => ({ ...it, isHighlighted: i === 3 })),
+        highlightedIndex: 3,
+        caption: 'Open Settings, then tap "Display"',
+      },
+      {
+        title: "Display",
+        showBack: true,
+        items: [
+          { icon: "sunny", label: "Brightness", hasArrow: true },
+          { icon: "sync", label: "Auto rotate", hasToggle: true, toggleOn: false, isHighlighted: true },
+          { icon: "text", label: "Font size and style", hasArrow: true },
+          { icon: "moon", label: "Screen mode", hasArrow: true },
+        ],
+        highlightedIndex: 1,
+        caption: 'Find "Auto rotate" and tap the switch to turn it ON',
+      },
+    ],
+  },
 };
 
 // ─── Stock Android (Pixel) guide data ─────────────────────────────────────────
@@ -644,6 +700,31 @@ const PIXEL_GUIDES: Record<SettingTopic, Omit<SettingsGuide, "uiStyle">> = {
       },
     ],
   },
+  rotate: {
+    topic: "rotate",
+    heading: "Auto-Rotate Screen (Android)",
+    steps: [
+      {
+        title: "Settings",
+        showSearch: true,
+        items: PIXEL_MAIN.map((it, i) => ({ ...it, isHighlighted: i === 5 })),
+        highlightedIndex: 5,
+        caption: 'Open Settings, then tap "Display"',
+      },
+      {
+        title: "Display",
+        showBack: true,
+        items: [
+          { icon: "sunny", label: "Brightness level", hasArrow: true },
+          { icon: "sync", label: "Auto-rotate screen", hasToggle: true, toggleOn: false, isHighlighted: true },
+          { icon: "contrast", label: "Dark theme", hasToggle: true, toggleOn: false },
+          { icon: "resize", label: "Display size and text", hasArrow: true },
+        ],
+        highlightedIndex: 1,
+        caption: 'Find "Auto-rotate screen" and tap the switch to turn it ON (turns blue)',
+      },
+    ],
+  },
 };
 
 // ─── selector ─────────────────────────────────────────────────────────────────
@@ -668,7 +749,19 @@ export function detectTopic(text: string): SettingTopic | null {
   if (t.includes("bluetooth")) return "bluetooth";
   if (t.includes("wi-fi") || t.includes("wifi") || t.includes("wi fi")) return "wifi";
   if (t.includes("volume") || t.includes("sound") || t.includes("ring")) return "volume";
-  if (t.includes("brightness") || t.includes("bright") || t.includes("display")) return "brightness";
+  // Rotate must be checked BEFORE brightness to avoid "Display" false-positives
+  if (
+    t.includes("auto rotate") ||
+    t.includes("auto-rotate") ||
+    t.includes("autorotate") ||
+    t.includes("screen rotation") ||
+    t.includes("screen rotate") ||
+    t.includes("rotate screen") ||
+    t.includes("rotation lock") ||
+    (t.includes("rotate") && !t.includes("unrelated"))
+  )
+    return "rotate";
+  if (t.includes("brightness") || t.includes("bright")) return "brightness";
   if (t.includes("silent") || t.includes("do not disturb") || t.includes("dnd") || t.includes("mute")) return "silent";
   if (t.includes("battery") || t.includes("power saver") || t.includes("low power")) return "battery";
   return null;

@@ -28,7 +28,7 @@ export function getDeviceInfo(): DeviceInfo {
       osVersion: "1.0",
       osMajorVersion: 1,
       brand: "web",
-      uiStyle: "ios",
+      uiStyle: "android",
       isDetected: false,
     };
     return _cache;

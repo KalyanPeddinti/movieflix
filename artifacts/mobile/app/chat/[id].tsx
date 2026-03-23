@@ -396,14 +396,26 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const { isListening, transcript, startListening, stopListening } = useVoiceInput(selectedLang);
 
-  // Detect setting topic — scan messages first, then fall back to title/prompt
+  // Detect setting topic — user messages first (strongest signal), then assistant,
+  // then fall back to title/prompt. This prevents long AI responses full of
+  // incidental words like "Display" from overriding the user's actual intent.
   const settingTopic = useMemo(() => {
-    // Scan all message content for a topic
-    for (const msg of messages) {
+    const userMsgs = messages.filter((m) => m.role === "user");
+    const assistantMsgs = messages.filter((m) => m.role === "assistant");
+    // Check user messages newest-first
+    for (const msg of [...userMsgs].reverse()) {
       const t = detectTopic(msg.content);
       if (t) return t;
     }
-    return detectTopic(initialPrompt ?? title);
+    // Check initialPrompt / title before falling into assistant text
+    const promptTopic = detectTopic(initialPrompt ?? title);
+    if (promptTopic) return promptTopic;
+    // Finally scan assistant messages (lowest priority — avoid false positives)
+    for (const msg of [...assistantMsgs].reverse()) {
+      const t = detectTopic(msg.content);
+      if (t) return t;
+    }
+    return null;
   }, [messages, initialPrompt, title]);
 
   // Detect which device/brand was mentioned in the conversation so the visual
