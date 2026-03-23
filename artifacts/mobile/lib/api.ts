@@ -1,6 +1,21 @@
 import { fetch } from "expo/fetch";
 import { getApiUrl } from "./query-client";
 
+export async function translateMessages(
+  texts: string[],
+  targetLanguage: string
+): Promise<string[]> {
+  if (texts.length === 0) return [];
+  const res = await fetch(`${getApiUrl()}api/gemini/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ texts, targetLanguage }),
+  });
+  if (!res.ok) return texts;
+  const data = await res.json();
+  return data.translated as string[];
+}
+
 export interface Conversation {
   id: number;
   title: string;
@@ -64,7 +79,8 @@ export async function streamMessage(
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (msg: string) => void,
-  deviceInfo?: DeviceInfoPayload
+  deviceInfo?: DeviceInfoPayload,
+  language?: string
 ): Promise<void> {
   const response = await fetch(
     `${getApiUrl()}api/gemini/conversations/${conversationId}/messages`,
@@ -74,7 +90,7 @@ export async function streamMessage(
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
-      body: JSON.stringify({ content, deviceInfo }),
+      body: JSON.stringify({ content, deviceInfo, language }),
     }
   );
 

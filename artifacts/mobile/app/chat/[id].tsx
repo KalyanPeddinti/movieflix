@@ -37,7 +37,7 @@ import AgentActionBar from "@/components/AgentActionBar";
 import VisualGuideSheet from "@/components/VisualGuideSheet";
 import Colors from "@/constants/colors";
 import { detectTopic, getGuideForDevice } from "@/constants/settingsGuides";
-import { streamMessage, fetchConversation } from "@/lib/api";
+import { streamMessage, fetchConversation, translateMessages } from "@/lib/api";
 import { getDeviceInfo, describeDevice, toApiPayload } from "@/lib/deviceInfo";
 
 // ─── unique ID generator ──────────────────────────────────────────────────────
@@ -324,6 +324,7 @@ export default function ChatScreen() {
   const [initialSent, setInitialSent] = useState(false);
   const [selectedLang, setSelectedLang] = useState<LangCode>("en-US");
   const [guideVisible, setGuideVisible] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // Get device info once
   const deviceInfo = useMemo(() => getDeviceInfo(), []);
@@ -384,6 +385,40 @@ export default function ChatScreen() {
     }
   }, [isListening, startListening, stopListening]);
 
+  // ─── Language change: translate all existing assistant messages ──────────────
+  const handleLangChange = useCallback(
+    async (lang: LangCode) => {
+      setSelectedLang(lang);
+      if (isStreaming || isTranslating) return;
+
+      const assistantMsgs = messages.filter((m) => m.role === "assistant");
+      if (assistantMsgs.length === 0) return;
+
+      setIsTranslating(true);
+      try {
+        const texts = assistantMsgs.map((m) => m.content);
+        const translated = await translateMessages(texts, lang);
+
+        setMessages((prev) => {
+          let idx = 0;
+          return prev.map((m) => {
+            if (m.role === "assistant") {
+              const updated = { ...m, content: translated[idx] ?? m.content };
+              idx++;
+              return updated;
+            }
+            return m;
+          });
+        });
+      } catch {
+        // silently keep original if translation fails
+      } finally {
+        setIsTranslating(false);
+      }
+    },
+    [messages, isStreaming, isTranslating]
+  );
+
   const handleSend = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -428,7 +463,8 @@ export default function ChatScreen() {
               ]);
             }
           },
-          devicePayload
+          devicePayload,
+          selectedLang
         );
       } catch {
         setShowTyping(false);
@@ -443,7 +479,7 @@ export default function ChatScreen() {
         setShowTyping(false);
       }
     },
-    [convId, isStreaming, isListening, stopListening]
+    [convId, isStreaming, isListening, stopListening, selectedLang]
   );
 
   const reversed = [...messages].reverse();
@@ -577,10 +613,20 @@ export default function ChatScreen() {
           ]}
         >
           {/* Language selector */}
-          <LanguageBar selected={selectedLang} onSelect={setSelectedLang} isDark={isDark} />
+          <LanguageBar selected={selectedLang} onSelect={handleLangChange} isDark={isDark} />
+
+          {/* Translating indicator */}
+          {isTranslating && (
+            <View style={[styles.listeningBanner, { backgroundColor: `${Colors.primary}12` }]}>
+              <ActivityIndicator size="small" color={Colors.primary} style={{ marginRight: 4 }} />
+              <Text style={[styles.listeningText, { color: Colors.primary, fontFamily: "Inter_500Medium" }]}>
+                Translating to {LANGUAGES.find((l) => l.code === selectedLang)?.full ?? "English"}…
+              </Text>
+            </View>
+          )}
 
           {/* Listening indicator */}
-          {isListening && (
+          {!isTranslating && isListening && (
             <View style={[styles.listeningBanner, { backgroundColor: `${Colors.danger}15` }]}>
               <Ionicons name="radio" size={14} color={Colors.danger} />
               <Text style={[styles.listeningText, { color: Colors.danger, fontFamily: "Inter_500Medium" }]}>

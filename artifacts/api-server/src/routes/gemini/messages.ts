@@ -11,8 +11,6 @@ const router = Router();
 
 const BASE_SYSTEM_PROMPT = `You are ElderAssist, a warm, patient, and helpful phone settings assistant designed specifically for elderly users who may not be familiar with modern smartphones.
 
-IMPORTANT LANGUAGE RULE: Always detect the language of the user's message and reply in THAT SAME LANGUAGE. If the user writes in Hindi, respond entirely in Hindi. If the user writes in Telugu, respond entirely in Telugu. If the user writes in English, respond in English. Never switch languages mid-reply.
-
 Your role is to help users change phone settings by providing VERY clear, step-by-step instructions. When a user asks you to help with a phone setting (like connecting Bluetooth, adjusting brightness, changing volume, enabling Wi-Fi, etc.), you should:
 
 1. Acknowledge their request warmly and confirm what they want to do
@@ -25,14 +23,26 @@ Your role is to help users change phone settings by providing VERY clear, step-b
 
 Always be patient, encouraging, and never make the user feel bad for asking. You are their trusted helper.`;
 
-function buildSystemPrompt(deviceInfo?: {
-  model: string;
-  manufacturer: string;
-  osName: string;
-  osVersion: string;
-}): string {
+const LANGUAGE_NAMES: Record<string, string> = {
+  "en-US": "English",
+  "hi-IN": "Hindi",
+  "te-IN": "Telugu",
+};
+
+function buildSystemPrompt(
+  deviceInfo?: {
+    model: string;
+    manufacturer: string;
+    osName: string;
+    osVersion: string;
+  },
+  language?: string
+): string {
+  const langName = LANGUAGE_NAMES[language ?? "en-US"] ?? "English";
+  const langDirective = `\n\nMANDATORY LANGUAGE RULE: You MUST respond ONLY in ${langName}. Every single word of your reply must be in ${langName}. Do not use any other language. Do not mix languages. This is non-negotiable.`;
+
   if (!deviceInfo || deviceInfo.osName === "Web") {
-    return BASE_SYSTEM_PROMPT;
+    return BASE_SYSTEM_PROMPT + langDirective;
   }
 
   const { model, manufacturer, osName, osVersion } = deviceInfo;
@@ -80,7 +90,7 @@ function buildSystemPrompt(deviceInfo?: {
     deviceContext += `- Battery saver: Settings → Battery → Battery Saver → toggle ON\n`;
   }
 
-  return BASE_SYSTEM_PROMPT + deviceContext;
+  return BASE_SYSTEM_PROMPT + deviceContext + langDirective;
 }
 
 interface DeviceInfoBody {
@@ -116,9 +126,10 @@ router.post("/:id/messages", async (req, res) => {
       return;
     }
 
-    const { content, deviceInfo } = req.body as {
+    const { content, deviceInfo, language } = req.body as {
       content?: string;
       deviceInfo?: DeviceInfoBody;
+      language?: string;
     };
 
     if (!content || typeof content !== "string" || !content.trim()) {
@@ -142,7 +153,7 @@ router.post("/:id/messages", async (req, res) => {
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
-    const systemPrompt = buildSystemPrompt(deviceInfo);
+    const systemPrompt = buildSystemPrompt(deviceInfo, language);
     let fullResponse = "";
 
     const stream = await ai.models.generateContentStream({
