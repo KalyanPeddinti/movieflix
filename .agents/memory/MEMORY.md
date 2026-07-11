@@ -1,0 +1,1 @@
+- [Playwright on NixOS — Chromium setup](playwright-nixos-chromium.md) — use Nix-managed chromium, not Playwright's headless-shell; set executablePath inside launchOptions not use.
