@@ -1,44 +1,48 @@
 import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import { MovieCard, MovieCardSkeleton } from './MovieCard';
-import type { Movie } from '@workspace/api-client-react';
-
-const SKELETONS = Array.from({ length: 6 }, (_, i) => i);
+import { MovieCard, type MovieCardMovie } from '@/components/MovieCard';
+import { MovieCardSkeleton } from '@/components/SkeletonLoader';
 
 interface MovieRowProps {
   title: string;
-  movies: Movie[];
-  isLoading: boolean;
+  movies: MovieCardMovie[];
+  isLoading?: boolean;
 }
+
+const SKELETONS = Array.from({ length: 6 }, (_, i) => i);
 
 export function MovieRow({ title, movies, isLoading }: MovieRowProps) {
   const colors = useColors();
 
   return (
-    <View style={s.container}>
-      <Text style={[s.title, { color: colors.foreground }]}>{title}</Text>
+    <View style={styles.container}>
+      <Text style={[styles.title, { color: colors.foreground, fontFamily: 'Outfit_600SemiBold' }]}>
+        {title}
+      </Text>
       {isLoading ? (
         <FlatList
-          horizontal
           data={SKELETONS}
-          keyExtractor={(i) => String(i)}
-          renderItem={() => <MovieCardSkeleton />}
-          contentContainerStyle={s.list}
-          showsHorizontalScrollIndicator={false}
+          horizontal
           scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => String(item)}
+          contentContainerStyle={styles.list}
+          renderItem={() => <MovieCardSkeleton />}
         />
       ) : (
         <FlatList
-          horizontal
           data={movies}
-          keyExtractor={(m) => String(m.id)}
-          renderItem={({ item }) => <MovieCard movie={item} />}
-          contentContainerStyle={s.list}
+          horizontal
           showsHorizontalScrollIndicator={false}
-          scrollEnabled={!!movies.length}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => <MovieCard movie={item} />}
+          scrollEnabled={movies.length > 0}
           ListEmptyComponent={
-            <Text style={[s.empty, { color: colors.mutedForeground }]}>No movies found</Text>
+            <Text style={[styles.empty, { color: colors.mutedForeground, fontFamily: 'Outfit_400Regular' }]}>
+              Nothing here yet
+            </Text>
           }
         />
       )}
@@ -46,9 +50,19 @@ export function MovieRow({ title, movies, isLoading }: MovieRowProps) {
   );
 }
 
-const s = StyleSheet.create({
-  container: { marginBottom: 24 },
-  title: { fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 10, paddingHorizontal: 16 },
-  list: { paddingHorizontal: 16 },
-  empty: { fontSize: 14, fontFamily: 'Inter_400Regular', paddingVertical: 20 },
+const styles = StyleSheet.create({
+  container: {
+    gap: 10,
+  },
+  title: {
+    fontSize: 17,
+    marginLeft: 16,
+  },
+  list: {
+    paddingHorizontal: 16,
+  },
+  empty: {
+    fontSize: 14,
+    paddingVertical: 20,
+  },
 });

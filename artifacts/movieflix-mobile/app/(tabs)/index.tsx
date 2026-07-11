@@ -1,132 +1,105 @@
-import React from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { useColors } from '@/hooks/useColors';
-import { useAuth } from '@/context/AuthContext';
 import {
   useGetTrendingMovies,
   useGetPopularMovies,
   useGetTopRatedMovies,
   useGetNowPlayingMovies,
   useGetUpcomingMovies,
-  useGetMyList,
 } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useColors } from '@/hooks/useColors';
 import { HeroBanner } from '@/components/HeroBanner';
 import { MovieRow } from '@/components/MovieRow';
-import type { Movie } from '@workspace/api-client-react';
+import { useWatchlist } from '@/context/WatchlistContext';
+import { useAuth } from '@/context/AuthContext';
+import { type MovieCardMovie } from '@/components/MovieCard';
 
-function myListItemToMovie(item: any): Movie {
+function watchlistItemToMovie(item: {
+  tmdb_id: number;
+  title: string;
+  poster_path?: string | null;
+  vote_average?: number | null;
+}): MovieCardMovie {
   return {
     id: item.tmdb_id,
     title: item.title,
-    overview: '',
-    poster_path: item.poster_path ?? null,
-    backdrop_path: item.backdrop_path ?? null,
-    vote_average: item.vote_average ?? 0,
-    vote_count: 0,
-    release_date: item.release_date ?? '',
-    genre_ids: [],
-    popularity: 0,
+    poster_path: item.poster_path,
+    vote_average: item.vote_average,
   };
 }
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { items: watchlistItems } = useWatchlist();
+  const isWeb = Platform.OS === 'web';
 
-  const { data: trending, isLoading: loadingTrending } = useGetTrendingMovies();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: trending, isLoading: loadingTrending, refetch: refetchTrending } = useGetTrendingMovies();
   const { data: popular, isLoading: loadingPopular } = useGetPopularMovies();
   const { data: topRated, isLoading: loadingTopRated } = useGetTopRatedMovies();
   const { data: nowPlaying, isLoading: loadingNowPlaying } = useGetNowPlayingMovies();
   const { data: upcoming, isLoading: loadingUpcoming } = useGetUpcomingMovies();
-  const { data: myList } = useGetMyList();
 
-  const featured = trending?.results?.[0] ?? popular?.results?.[0] ?? null;
-  const myListMovies = (myList?.items ?? []).map(myListItemToMovie);
+  const featuredMovie = trending?.results?.[0] ?? popular?.results?.[0] ?? null;
 
-  const topPad = Platform.OS === 'web' ? 67 : 0;
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries();
+    setRefreshing(false);
+  };
+
+  const topPadding = isWeb ? 67 : insets.top;
+  // Banner sits under the absolute header so we need the hero to account for top
+  const bannerTopPadding = topPadding + 50; // 50px for the nav bar overlay
+
+  const myListMovies = watchlistItems.map(watchlistItemToMovie);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Floating header */}
-      <View
-        style={[
-          s.header,
-          { paddingTop: insets.top + topPad + 8, paddingBottom: 8 },
-        ]}
-        pointerEvents="box-none"
-      >
-        <Text style={[s.logoText, { color: colors.primary }]}>MovieFlix</Text>
-        <View style={s.headerRight}>
-          <Pressable
-            onPress={() => router.push('/movie/0')}
-            style={s.iconBtn}
-            hitSlop={8}
-          >
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              s.avatar,
-              { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
-            ]}
-            onPress={logout}
-            hitSlop={8}
-          >
-            <Text style={s.avatarText}>
-              {user?.name?.[0]?.toUpperCase() ?? 'U'}
-            </Text>
-          </Pressable>
-        </View>
+    <ScrollView
+      style={[styles.screen, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingBottom: isWeb ? 84 : insets.bottom + 80 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={colors.primary}
+        />
+      }
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Spacer for header overlay */}
+      <View style={{ height: bannerTopPadding, position: 'absolute', top: 0 }} />
+
+      <View style={{ marginTop: 0 }}>
+        <HeroBanner movie={featuredMovie} isLoading={loadingTrending} />
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + (Platform.OS === 'web' ? 84 : 100),
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <HeroBanner movie={featured} isLoading={loadingTrending && loadingPopular} />
-
-        <View style={{ marginTop: 16 }}>
-          {myListMovies.length > 0 && (
-            <MovieRow title="My List" movies={myListMovies} isLoading={false} />
-          )}
-          <MovieRow title="Trending Now" movies={trending?.results ?? []} isLoading={loadingTrending} />
-          <MovieRow title="Popular" movies={popular?.results ?? []} isLoading={loadingPopular} />
-          <MovieRow title="Now Playing" movies={nowPlaying?.results ?? []} isLoading={loadingNowPlaying} />
-          <MovieRow title="Top Rated" movies={topRated?.results ?? []} isLoading={loadingTopRated} />
-          <MovieRow title="Upcoming" movies={upcoming?.results ?? []} isLoading={loadingUpcoming} />
-        </View>
-      </ScrollView>
-    </View>
+      <View style={styles.rows}>
+        {user && myListMovies.length > 0 && (
+          <MovieRow title="My List" movies={myListMovies} />
+        )}
+        <MovieRow title="Trending Now" movies={trending?.results ?? []} isLoading={loadingTrending} />
+        <MovieRow title="Popular" movies={popular?.results ?? []} isLoading={loadingPopular} />
+        <MovieRow title="Now Playing" movies={nowPlaying?.results ?? []} isLoading={loadingNowPlaying} />
+        <MovieRow title="Top Rated" movies={topRated?.results ?? []} isLoading={loadingTopRated} />
+        <MovieRow title="Upcoming" movies={upcoming?.results ?? []} isLoading={loadingUpcoming} />
+      </View>
+    </ScrollView>
   );
 }
 
-const s = StyleSheet.create({
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
   },
-  logoText: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtn: { padding: 4 },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+  rows: {
+    gap: 28,
+    paddingTop: 16,
   },
-  avatarText: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#fff' },
 });

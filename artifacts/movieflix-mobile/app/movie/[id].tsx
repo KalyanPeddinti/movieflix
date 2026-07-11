@@ -9,259 +9,399 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
-import { useColors } from '@/hooks/useColors';
-import {
-  useGetMovieDetail,
-  useGetMyList,
-  useAddToMyList,
-  useRemoveFromMyList,
-  getGetMyListQueryKey,
-} from '@workspace/api-client-react';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGetMovieDetail, getGetMovieDetailQueryKey } from '@workspace/api-client-react';
+import { useColors } from '@/hooks/useColors';
+import { useAuth } from '@/context/AuthContext';
+import { useWatchlist } from '@/context/WatchlistContext';
 
-const { width, height } = Dimensions.get('window');
-const BACKDROP_H = height * 0.5;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BACKDROP_HEIGHT = 280;
+const BACKDROP_BASE = 'https://image.tmdb.org/t/p/w780';
+const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 
 export default function MovieDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const movieId = parseInt(id ?? '0', 10);
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
+  const router = useRouter();
+  const isWeb = Platform.OS === 'web';
+  const { user } = useAuth();
+  const { isInList, addToList, removeFromList } = useWatchlist();
 
-  const { data: movie, isLoading, isError } = useGetMovieDetail(movieId);
-  const { data: myList } = useGetMyList();
-  const addMutation = useAddToMyList();
-  const removeMutation = useRemoveFromMyList();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const movieId = parseInt(id ?? '0', 10);
 
-  const isInList = myList?.items?.some((item) => item.tmdb_id === movieId) ?? false;
-  const isMutating = addMutation.isPending || removeMutation.isPending;
+  const { data: movie, isLoading, isError } = useGetMovieDetail(movieId, {
+    query: { enabled: !isNaN(movieId) && movieId > 0, queryKey: getGetMovieDetailQueryKey(movieId) },
+  });
 
-  const invalidateList = () => queryClient.invalidateQueries({ queryKey: getGetMyListQueryKey() });
+  const inList = movie ? isInList(movie.id) : false;
+  const topPad = isWeb ? 67 : insets.top;
 
-  const toggleList = async () => {
-    try {
-      if (isInList) {
-        await removeMutation.mutateAsync({ tmdbId: movieId });
-      } else if (movie) {
-        await addMutation.mutateAsync({
-          data: {
-            tmdb_id: movie.id,
-            title: movie.title,
-            poster_path: movie.poster_path ?? null,
-            backdrop_path: movie.backdrop_path ?? null,
-            vote_average: movie.vote_average ?? null,
-            release_date: movie.release_date ?? null,
-          },
-        });
-      }
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      invalidateList();
-    } catch {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  const handleWatchlist = () => {
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+    if (!movie) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (inList) {
+      removeFromList(movie.id);
+    } else {
+      addToList({
+        tmdb_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path ?? null,
+        backdrop_path: movie.backdrop_path ?? null,
+        vote_average: movie.vote_average ?? null,
+        release_date: movie.release_date,
+      });
     }
   };
 
-  const topPad = Platform.OS === 'web' ? 67 : 0;
-  const bottomPad = insets.bottom + (Platform.OS === 'web' ? 34 : 0);
-
   if (isLoading) {
     return (
-      <View style={[s.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} size="large" />
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <ActivityIndicator style={{ marginTop: 100 }} color={colors.primary} size="large" />
       </View>
     );
   }
 
   if (isError || !movie) {
     return (
-      <View style={[s.center, { backgroundColor: colors.background }]}>
-        <Feather name="alert-circle" size={40} color={colors.mutedForeground} />
-        <Text style={[s.errorText, { color: colors.mutedForeground }]}>Movie not found</Text>
+      <View style={[styles.screen, styles.errorContainer, { backgroundColor: colors.background }]}>
+        <Ionicons name="alert-circle-outline" size={48} color={colors.mutedForeground} />
+        <Text style={[styles.errorText, { color: colors.foreground, fontFamily: 'Outfit_600SemiBold' }]}>
+          Couldn't load this movie
+        </Text>
+        <Pressable onPress={() => router.back()} style={[styles.retryBtn, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.retryText, { fontFamily: 'Outfit_600SemiBold' }]}>Go Back</Text>
+        </Pressable>
       </View>
     );
   }
 
-  const backdropUrl = movie.backdrop_path
-    ? `https://image.tmdb.org/t/p/w780${movie.backdrop_path}`
+  const backdropUri = movie.backdrop_path
+    ? `${BACKDROP_BASE}${movie.backdrop_path}`
     : movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : null;
 
-  const year = movie.release_date?.split('-')[0] ?? '';
-  const runtime = movie.runtime ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m` : '';
+  const year = movie.release_date ? movie.release_date.slice(0, 4) : '';
+  const runtime = movie.runtime
+    ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m`
+    : null;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: bottomPad + 32 }}
-    >
-      {/* Backdrop */}
-      <View style={{ height: BACKDROP_H + topPad }}>
-        {backdropUrl ? (
-          <Image
-            source={{ uri: backdropUrl }}
-            style={[StyleSheet.absoluteFill]}
-            contentFit="cover"
-            transition={300}
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      {/* Back button */}
+      <Pressable
+        onPress={() => router.back()}
+        style={[styles.backBtn, { top: topPad + 8 }]}
+        hitSlop={12}
+      >
+        <View style={styles.backBtnInner}>
+          <Ionicons name="chevron-back" size={22} color="#fff" />
+        </View>
+      </Pressable>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: isWeb ? 84 : insets.bottom + 32 }}
+      >
+        {/* Backdrop */}
+        <View style={styles.backdropContainer}>
+          {backdropUri ? (
+            <Image
+              source={{ uri: backdropUri }}
+              style={styles.backdrop}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <View style={[styles.backdrop, { backgroundColor: colors.muted }]} />
+          )}
+          <LinearGradient
+            colors={['transparent', colors.background]}
+            locations={[0.4, 1]}
+            style={StyleSheet.absoluteFill}
           />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.muted }]} />
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(10,10,10,0.5)', colors.background]}
-          locations={[0.4, 0.75, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={['rgba(10,10,10,0.5)', 'transparent']}
-          locations={[0, 0.3]}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-
-      {/* Info */}
-      <View style={[s.info, { paddingTop: 4 }]}>
-        <Text style={[s.title, { color: colors.foreground }]}>{movie.title}</Text>
-
-        {!!movie.tagline && (
-          <Text style={[s.tagline, { color: colors.mutedForeground }]}>{movie.tagline}</Text>
-        )}
-
-        {/* Meta row */}
-        <View style={s.metaRow}>
-          {!!year && (
-            <View style={[s.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[s.badgeText, { color: colors.mutedForeground }]}>{year}</Text>
-            </View>
-          )}
-          {!!runtime && (
-            <View style={[s.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[s.badgeText, { color: colors.mutedForeground }]}>{runtime}</Text>
-            </View>
-          )}
-          {movie.vote_average > 0 && (
-            <View style={[s.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[s.badgeText, { color: '#f5c518' }]}>
-                ★ {movie.vote_average.toFixed(1)}
-              </Text>
-            </View>
-          )}
         </View>
 
-        {/* Genres */}
-        {movie.genres?.length > 0 && (
-          <View style={s.genres}>
-            {movie.genres.map((g) => (
-              <View key={g.id} style={[s.genre, { borderColor: colors.border }]}>
-                <Text style={[s.genreText, { color: colors.mutedForeground }]}>{g.name}</Text>
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Poster + meta side by side */}
+          <View style={styles.topRow}>
+            <View style={[styles.poster, { backgroundColor: colors.muted, borderRadius: colors.radius }]}>
+              {movie.poster_path ? (
+                <Image
+                  source={{ uri: `${POSTER_BASE}${movie.poster_path}` }}
+                  style={[styles.poster, { borderRadius: colors.radius }]}
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : (
+                <View style={[styles.poster, styles.noPoster, { borderRadius: colors.radius }]}>
+                  <Text style={[styles.noPosterText, { color: colors.mutedForeground }]}>
+                    {movie.title?.charAt(0) ?? '?'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.metaCol}>
+              <Text style={[styles.title, { color: colors.foreground, fontFamily: 'Outfit_700Bold' }]} numberOfLines={3}>
+                {movie.title}
+              </Text>
+              {movie.tagline ? (
+                <Text style={[styles.tagline, { color: colors.mutedForeground, fontFamily: 'Outfit_400Regular' }]} numberOfLines={2}>
+                  {movie.tagline}
+                </Text>
+              ) : null}
+
+              <View style={styles.badges}>
+                {year ? (
+                  <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
+                    <Text style={[styles.badgeText, { color: colors.secondaryForeground, fontFamily: 'Outfit_500Medium' }]}>
+                      {year}
+                    </Text>
+                  </View>
+                ) : null}
+                {runtime ? (
+                  <View style={[styles.badge, { backgroundColor: colors.secondary }]}>
+                    <Text style={[styles.badgeText, { color: colors.secondaryForeground, fontFamily: 'Outfit_500Medium' }]}>
+                      {runtime}
+                    </Text>
+                  </View>
+                ) : null}
+                {movie.vote_average > 0 ? (
+                  <View style={[styles.badge, { backgroundColor: 'rgba(255,215,0,0.15)' }]}>
+                    <Ionicons name="star" size={11} color="#FFD700" />
+                    <Text style={[styles.badgeText, { color: '#FFD700', fontFamily: 'Outfit_600SemiBold' }]}>
+                      {movie.vote_average.toFixed(1)}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
-            ))}
+            </View>
           </View>
-        )}
 
-        {/* Action buttons */}
-        <View style={s.actions}>
-          <Pressable
-            style={({ pressed }) => [
-              s.playBtn,
-              { backgroundColor: '#fff', borderRadius: colors.radius, opacity: pressed ? 0.85 : 1 },
-            ]}
-            onPress={() => {}}
-          >
-            <Feather name="play" size={18} color="#000" />
-            <Text style={s.playText}>Play</Text>
-          </Pressable>
+          {/* Genres */}
+          {movie.genres && movie.genres.length > 0 ? (
+            <View style={styles.genres}>
+              {movie.genres.map((g) => (
+                <View key={g.id} style={[styles.genreChip, { backgroundColor: colors.secondary, borderRadius: 20 }]}>
+                  <Text style={[styles.genreText, { color: colors.secondaryForeground, fontFamily: 'Outfit_500Medium' }]}>
+                    {g.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
+          {/* Watchlist button */}
           <Pressable
+            onPress={handleWatchlist}
             style={({ pressed }) => [
-              s.listBtn,
+              styles.watchlistBtn,
               {
-                backgroundColor: isInList ? colors.primary : colors.secondary,
+                backgroundColor: inList ? colors.secondary : colors.primary,
                 borderRadius: colors.radius,
-                opacity: pressed || isMutating ? 0.7 : 1,
+                opacity: pressed ? 0.85 : 1,
               },
             ]}
-            onPress={toggleList}
-            disabled={isMutating}
           >
-            {isMutating ? (
-              <ActivityIndicator color={isInList ? '#fff' : colors.foreground} size="small" />
-            ) : (
-              <>
-                <Feather
-                  name={isInList ? 'check' : 'plus'}
-                  size={18}
-                  color={isInList ? '#fff' : colors.foreground}
-                />
-                <Text style={[s.listText, { color: isInList ? '#fff' : colors.foreground }]}>
-                  {isInList ? 'In My List' : 'My List'}
-                </Text>
-              </>
-            )}
+            <Ionicons
+              name={inList ? 'checkmark' : 'add'}
+              size={20}
+              color={inList ? colors.secondaryForeground : '#fff'}
+            />
+            <Text
+              style={[
+                styles.watchlistBtnText,
+                { color: inList ? colors.secondaryForeground : '#fff', fontFamily: 'Outfit_600SemiBold' },
+              ]}
+            >
+              {inList ? 'In My List' : '+ My List'}
+            </Text>
           </Pressable>
-        </View>
 
-        {/* Overview */}
-        {!!movie.overview && (
-          <Text style={[s.overview, { color: colors.foreground }]}>{movie.overview}</Text>
-        )}
+          {/* Overview */}
+          {movie.overview ? (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Outfit_600SemiBold' }]}>
+                Overview
+              </Text>
+              <Text style={[styles.overview, { color: colors.mutedForeground, fontFamily: 'Outfit_400Regular' }]}>
+                {movie.overview}
+              </Text>
+            </View>
+          ) : null}
 
-        {/* Status */}
-        <View style={[s.statusRow, { borderTopColor: colors.border }]}>
-          <Text style={[s.statusLabel, { color: colors.mutedForeground }]}>Status</Text>
-          <Text style={[s.statusValue, { color: colors.foreground }]}>{movie.status}</Text>
+          {/* Info rows */}
+          <View style={[styles.infoSection, { borderColor: colors.border }]}>
+            {movie.status ? (
+              <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.infoLabel, { color: colors.mutedForeground, fontFamily: 'Outfit_500Medium' }]}>Status</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground, fontFamily: 'Outfit_400Regular' }]}>{movie.status}</Text>
+              </View>
+            ) : null}
+            {movie.vote_count > 0 ? (
+              <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.infoLabel, { color: colors.mutedForeground, fontFamily: 'Outfit_500Medium' }]}>Votes</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground, fontFamily: 'Outfit_400Regular' }]}>
+                  {movie.vote_count.toLocaleString()}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
-const s = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontSize: 16, fontFamily: 'Inter_400Regular' },
-  info: { paddingHorizontal: 16 },
-  title: { fontSize: 26, fontFamily: 'Inter_700Bold', marginBottom: 4, letterSpacing: -0.5 },
-  tagline: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 12 },
-  metaRow: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
-  badgeText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  genres: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  genre: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, borderWidth: 1 },
-  genreText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  actions: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  playBtn: {
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    padding: 32,
+  },
+  errorText: { fontSize: 18, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  retryText: { color: '#fff', fontSize: 15 },
+  backBtn: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 10,
+  },
+  backBtnInner: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backdropContainer: {
+    width: SCREEN_WIDTH,
+    height: BACKDROP_HEIGHT,
+    position: 'relative',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  content: {
+    padding: 20,
+    gap: 16,
+  },
+  topRow: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'flex-start',
+  },
+  poster: {
+    width: 110,
+    height: 165,
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  noPoster: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noPosterText: {
+    fontSize: 36,
+    fontFamily: 'Outfit_700Bold',
+  },
+  metaCol: {
     flex: 1,
+    gap: 6,
+    paddingTop: 4,
+  },
+  title: {
+    fontSize: 22,
+    lineHeight: 27,
+  },
+  tagline: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  badges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontSize: 12,
+  },
+  genres: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  genreChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  genreText: {
+    fontSize: 12,
+  },
+  watchlistBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
+    gap: 8,
+    paddingVertical: 14,
   },
-  playText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#000' },
-  listBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
+  watchlistBtnText: {
+    fontSize: 16,
   },
-  listText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  overview: { fontSize: 15, fontFamily: 'Inter_400Regular', lineHeight: 23, marginBottom: 24 },
-  statusRow: {
+  section: {
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 17,
+  },
+  overview: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  infoSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+  },
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  statusLabel: { fontSize: 14, fontFamily: 'Inter_500Medium' },
-  statusValue: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  infoLabel: {
+    fontSize: 14,
+  },
+  infoValue: {
+    fontSize: 14,
+  },
 });

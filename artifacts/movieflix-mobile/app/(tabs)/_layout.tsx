@@ -1,8 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View, useColorScheme } from 'react-native';
-import { Redirect } from 'expo-router';
+import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import { useAuth } from '@/context/AuthContext';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -19,12 +17,16 @@ function NativeTabLayout() {
         <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="search" role="search">
-        <Icon sf="magnifyingglass" />
+        <Icon sf={{ default: 'magnifyingglass', selected: 'magnifyingglass' }} />
         <Label>Search</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="mylist">
+      <NativeTabs.Trigger name="my-list">
         <Icon sf={{ default: 'bookmark', selected: 'bookmark.fill' }} />
         <Label>My List</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
+        <Label>Profile</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -56,8 +58,8 @@ function ClassicTabLayout() {
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={80}
-              tint={isDark ? 'dark' : 'dark'}
+              intensity={100}
+              tint={isDark ? 'dark' : 'light'}
               style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (
@@ -90,7 +92,7 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="mylist"
+        name="my-list"
         options={{
           title: 'My List',
           tabBarIcon: ({ color }) =>
@@ -101,26 +103,23 @@ function ClassicTabLayout() {
             ),
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="person" tintColor={color} size={24} />
+            ) : (
+              <Feather name="user" size={22} color={color} />
+            ),
+        }}
+      />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  const { user, isLoading } = useAuth();
-  const colors = useColors();
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
-  }
-
-  if (!user) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
   if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }

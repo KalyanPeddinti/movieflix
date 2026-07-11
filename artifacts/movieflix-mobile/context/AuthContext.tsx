@@ -1,97 +1,66 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAuthTokenGetter } from '@workspace/api-client-react';
+import { setAuthToken } from '@/lib/authToken';
 
-const TOKEN_KEY = '@movieflix_token';
-const USER_KEY = '@movieflix_user';
-
-interface User {
+export interface AuthUser {
   id: number;
   name: string;
   email: string;
 }
 
-interface AuthContextValue {
-  user: User | null;
+interface AuthState {
+  user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+}
+
+interface AuthContextValue extends AuthState {
+  login: (token: string, user: AuthUser) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const TOKEN_KEY = 'movieflix_token';
+const USER_KEY = 'movieflix_user';
 
-  useEffect(() => {
-    setAuthTokenGetter(() => token);
-  }, [token]);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    token: null,
+    isLoading: true,
+  });
 
   useEffect(() => {
     (async () => {
       try {
-        const [savedToken, savedUser] = await Promise.all([
-          AsyncStorage.getItem(TOKEN_KEY),
-          AsyncStorage.getItem(USER_KEY),
-        ]);
-        if (savedToken && savedUser) {
-          setToken(savedToken);
-          setUser(JSON.parse(savedUser));
-        }
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const raw = await AsyncStorage.getItem(USER_KEY);
+        const user: AuthUser | null = raw ? JSON.parse(raw) : null;
+        setAuthToken(token);
+        setState({ user, token, isLoading: false });
       } catch {
-        // ignore
-      } finally {
-        setIsLoading(false);
+        setState({ user: null, token: null, isLoading: false });
       }
     })();
   }, []);
 
-  const persistSession = async (t: string, u: User) => {
-    await Promise.all([
-      AsyncStorage.setItem(TOKEN_KEY, t),
-      AsyncStorage.setItem(USER_KEY, JSON.stringify(u)),
-    ]);
-    setToken(t);
-    setUser(u);
-  };
+  const login = useCallback(async (token: string, user: AuthUser) => {
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    setAuthToken(token);
+    setState({ user, token, isLoading: false });
+  }, []);
 
-  const login = async (email: string, password: string) => {
-    const res = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    await persistSession(data.token, data.user);
-  };
-
-  const register = async (name: string, email: string, password: string) => {
-    const res = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Registration failed');
-    await persistSession(data.token, data.user);
-  };
-
-  const logout = async () => {
-    await Promise.all([
-      AsyncStorage.removeItem(TOKEN_KEY),
-      AsyncStorage.removeItem(USER_KEY),
-    ]);
-    setToken(null);
-    setUser(null);
-  };
+  const logout = useCallback(async () => {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(USER_KEY);
+    setAuthToken(null);
+    setState({ user: null, token: null, isLoading: false });
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
