@@ -7,7 +7,10 @@ import { RegisterBody, LoginBody, LoginResponse, GetMeResponse } from "@workspac
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "fallback-dev-secret-change-in-prod";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required but not set.");
+}
 const JWT_EXPIRES_IN = "7d";
 
 function signToken(userId: number) {
