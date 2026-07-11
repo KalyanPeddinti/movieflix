@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Home from "@/pages/Home";
 import MovieDetail from "@/pages/MovieDetail";
+import Browse from "@/pages/Browse";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import NotFound from "@/pages/not-found";
@@ -27,6 +28,11 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           <Home />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/browse">
+        <ProtectedRoute>
+          <Browse />
         </ProtectedRoute>
       </Route>
       <Route path="/movie/:id">

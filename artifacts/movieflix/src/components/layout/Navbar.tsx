@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
+import { SearchBar } from "@/components/search/SearchBar";
 
 const navLinks = [
   { label: "Home", href: "/" },
-  { label: "Movies", href: "/#trending" },
-  { label: "Top Rated", href: "/#top-rated" },
-  { label: "New & Now", href: "/#now-playing" },
+  { label: "Browse", href: "/browse" },
 ];
 
 function UserMenu() {
@@ -54,7 +53,7 @@ function UserMenu() {
     .toUpperCase();
 
   return (
-    <div className="relative ml-auto" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 group"
@@ -104,7 +103,7 @@ export function Navbar() {
 
   return (
     <header className="fixed top-0 z-50 w-full bg-gradient-to-b from-black/80 to-transparent">
-      <div className="container mx-auto px-4 md:px-8 flex items-center gap-8 h-20">
+      <div className="container mx-auto px-4 md:px-8 flex items-center gap-6 h-20">
         <Link
           href="/"
           className="flex items-center gap-2 transition-transform hover:scale-105 shrink-0"
@@ -128,7 +127,10 @@ export function Navbar() {
           ))}
         </nav>
 
-        <UserMenu />
+        <div className="flex items-center gap-3 ml-auto">
+          <SearchBar />
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

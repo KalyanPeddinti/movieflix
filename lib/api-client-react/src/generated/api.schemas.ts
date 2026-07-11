@@ -63,6 +63,10 @@ export interface Genre {
   name: string;
 }
 
+export interface GenreListResponse {
+  genres: Genre[];
+}
+
 export interface MovieDetail {
   id: number;
   title: string;
@@ -83,3 +87,13 @@ export interface MovieDetail {
   /** @nullable */
   homepage?: string | null;
 }
+
+export type SearchMoviesParams = {
+  q: string;
+  page?: number;
+};
+
+export type GetMoviesByGenreParams = {
+  genre_id: number;
+  page?: number;
+};

@@ -19,11 +19,14 @@ import type {
 import type {
   ApiError,
   AuthResponse,
+  GenreListResponse,
+  GetMoviesByGenreParams,
   HealthStatus,
   LoginBody,
   MovieDetail,
   MovieListResponse,
   RegisterBody,
+  SearchMoviesParams,
   UserProfile,
 } from "./api.schemas";
 
@@ -339,6 +342,264 @@ export function useGetMe<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Search movies by query
+ */
+export const getSearchMoviesUrl = (params: SearchMoviesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/movies/search?${stringifiedParams}`
+    : `/api/movies/search`;
+};
+
+export const searchMovies = async (
+  params: SearchMoviesParams,
+  options?: RequestInit,
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getSearchMoviesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchMoviesQueryKey = (params?: SearchMoviesParams) => {
+  return [`/api/movies/search`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchMoviesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchMovies>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchMoviesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof searchMovies>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchMoviesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchMovies>>> = ({
+    signal,
+  }) => searchMovies(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchMovies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type SearchMoviesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchMovies>>
+>;
+export type SearchMoviesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Search movies by query
+ */
+
+export function useSearchMovies<
+  TData = Awaited<ReturnType<typeof searchMovies>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchMoviesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof searchMovies>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getSearchMoviesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get movie genre list
+ */
+export const getGetGenresUrl = () => {
+  return `/api/movies/genres`;
+};
+
+export const getGenres = async (
+  options?: RequestInit,
+): Promise<GenreListResponse> => {
+  return customFetch<GenreListResponse>(getGetGenresUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGenresQueryKey = () => {
+  return [`/api/movies/genres`] as const;
+};
+
+export const getGetGenresQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGenres>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getGenres>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGenresQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGenres>>> = ({
+    signal,
+  }) => getGenres({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGenres>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGenresQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGenres>>
+>;
+export type GetGenresQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get movie genre list
+ */
+
+export function useGetGenres<
+  TData = Awaited<ReturnType<typeof getGenres>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getGenres>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGenresQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get movies by genre ID
+ */
+export const getGetMoviesByGenreUrl = (params: GetMoviesByGenreParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/movies/by-genre?${stringifiedParams}`
+    : `/api/movies/by-genre`;
+};
+
+export const getMoviesByGenre = async (
+  params: GetMoviesByGenreParams,
+  options?: RequestInit,
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getGetMoviesByGenreUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMoviesByGenreQueryKey = (
+  params?: GetMoviesByGenreParams,
+) => {
+  return [`/api/movies/by-genre`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetMoviesByGenreQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMoviesByGenre>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetMoviesByGenreParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMoviesByGenre>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMoviesByGenreQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMoviesByGenre>>
+  > = ({ signal }) => getMoviesByGenre(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMoviesByGenre>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMoviesByGenreQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMoviesByGenre>>
+>;
+export type GetMoviesByGenreQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get movies by genre ID
+ */
+
+export function useGetMoviesByGenre<
+  TData = Awaited<ReturnType<typeof getMoviesByGenre>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetMoviesByGenreParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMoviesByGenre>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMoviesByGenreQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -53,6 +53,78 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * @summary Search movies by query
+ */
+export const searchMoviesQueryPageDefault = 1;
+
+export const SearchMoviesQueryParams = zod.object({
+  q: zod.coerce.string(),
+  page: zod.coerce.number().default(searchMoviesQueryPageDefault),
+});
+
+export const SearchMoviesResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
+    }),
+  ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
+});
+
+/**
+ * @summary Get movie genre list
+ */
+export const GetGenresResponse = zod.object({
+  genres: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get movies by genre ID
+ */
+export const getMoviesByGenreQueryPageDefault = 1;
+
+export const GetMoviesByGenreQueryParams = zod.object({
+  genre_id: zod.coerce.number(),
+  page: zod.coerce.number().default(getMoviesByGenreQueryPageDefault),
+});
+
+export const GetMoviesByGenreResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
+    }),
+  ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
+});
+
+/**
  * @summary Get trending movies
  */
 export const GetTrendingMoviesResponse = zod.object({
