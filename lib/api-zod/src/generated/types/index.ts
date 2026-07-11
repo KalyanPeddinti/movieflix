@@ -7,8 +7,12 @@
  */
 
 export * from "./apiError";
+export * from "./authResponse";
 export * from "./genre";
 export * from "./healthStatus";
+export * from "./loginBody";
 export * from "./movie";
 export * from "./movieDetail";
 export * from "./movieListResponse";
+export * from "./registerBody";
+export * from "./userProfile";

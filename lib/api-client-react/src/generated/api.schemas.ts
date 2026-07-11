@@ -13,6 +13,29 @@ export interface ApiError {
   error: string;
 }
 
+export interface RegisterBody {
+  name: string;
+  email: string;
+  /** @minLength 8 */
+  password: string;
+}
+
+export interface LoginBody {
+  email: string;
+  password: string;
+}
+
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: UserProfile;
+}
+
 export interface Movie {
   id: number;
   title: string;
