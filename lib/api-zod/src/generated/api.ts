@@ -53,6 +53,47 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * @summary Get current user's watchlist
+ */
+export const GetMyListResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      tmdb_id: zod.number(),
+      title: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number().nullish(),
+      release_date: zod.string().nullish(),
+      added_at: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Add a movie to watchlist
+ */
+export const AddToMyListBody = zod.object({
+  tmdb_id: zod.number(),
+  title: zod.string(),
+  poster_path: zod.string().nullish(),
+  backdrop_path: zod.string().nullish(),
+  vote_average: zod.number().nullish(),
+  release_date: zod.string().nullish(),
+});
+
+/**
+ * @summary Remove a movie from watchlist
+ */
+export const RemoveFromMyListParams = zod.object({
+  tmdbId: zod.coerce.number(),
+});
+
+export const RemoveFromMyListResponse = zod.object({
+  error: zod.string(),
+});
+
+/**
  * @summary Search movies by query
  */
 export const searchMoviesQueryPageDefault = 1;
@@ -237,6 +278,25 @@ export const GetUpcomingMoviesResponse = zod.object({
   page: zod.number(),
   total_pages: zod.number(),
   total_results: zod.number(),
+});
+
+/**
+ * @summary Get videos (trailers) for a movie
+ */
+export const GetMovieVideosParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetMovieVideosResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.string(),
+      key: zod.string(),
+      name: zod.string(),
+      site: zod.string(),
+      type: zod.string(),
+    }),
+  ),
 });
 
 /**

@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddToWatchlistBody,
   ApiError,
   AuthResponse,
   GenreListResponse,
@@ -28,6 +29,9 @@ import type {
   RegisterBody,
   SearchMoviesParams,
   UserProfile,
+  VideoListResponse,
+  WatchlistMovieItem,
+  WatchlistResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -349,6 +353,243 @@ export function useGetMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get current user's watchlist
+ */
+export const getGetMyListUrl = () => {
+  return `/api/my-list`;
+};
+
+export const getMyList = async (
+  options?: RequestInit,
+): Promise<WatchlistResponse> => {
+  return customFetch<WatchlistResponse>(getGetMyListUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyListQueryKey = () => {
+  return [`/api/my-list`] as const;
+};
+
+export const getGetMyListQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyList>>,
+  TError = ErrorType<ApiError>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMyList>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyListQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyList>>> = ({
+    signal,
+  }) => getMyList({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyList>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyListQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyList>>
+>;
+export type GetMyListQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get current user's watchlist
+ */
+
+export function useGetMyList<
+  TData = Awaited<ReturnType<typeof getMyList>>,
+  TError = ErrorType<ApiError>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMyList>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyListQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a movie to watchlist
+ */
+export const getAddToMyListUrl = () => {
+  return `/api/my-list`;
+};
+
+export const addToMyList = async (
+  addToWatchlistBody: AddToWatchlistBody,
+  options?: RequestInit,
+): Promise<WatchlistMovieItem> => {
+  return customFetch<WatchlistMovieItem>(getAddToMyListUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addToWatchlistBody),
+  });
+};
+
+export const getAddToMyListMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addToMyList>>,
+    TError,
+    { data: BodyType<AddToWatchlistBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addToMyList>>,
+  TError,
+  { data: BodyType<AddToWatchlistBody> },
+  TContext
+> => {
+  const mutationKey = ["addToMyList"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addToMyList>>,
+    { data: BodyType<AddToWatchlistBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addToMyList(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddToMyListMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addToMyList>>
+>;
+export type AddToMyListMutationBody = BodyType<AddToWatchlistBody>;
+export type AddToMyListMutationError = ErrorType<ApiError>;
+
+/**
+ * @summary Add a movie to watchlist
+ */
+export const useAddToMyList = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addToMyList>>,
+    TError,
+    { data: BodyType<AddToWatchlistBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addToMyList>>,
+  TError,
+  { data: BodyType<AddToWatchlistBody> },
+  TContext
+> => {
+  return useMutation(getAddToMyListMutationOptions(options));
+};
+
+/**
+ * @summary Remove a movie from watchlist
+ */
+export const getRemoveFromMyListUrl = (tmdbId: number) => {
+  return `/api/my-list/${tmdbId}`;
+};
+
+export const removeFromMyList = async (
+  tmdbId: number,
+  options?: RequestInit,
+): Promise<ApiError> => {
+  return customFetch<ApiError>(getRemoveFromMyListUrl(tmdbId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveFromMyListMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFromMyList>>,
+    TError,
+    { tmdbId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeFromMyList>>,
+  TError,
+  { tmdbId: number },
+  TContext
+> => {
+  const mutationKey = ["removeFromMyList"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeFromMyList>>,
+    { tmdbId: number }
+  > = (props) => {
+    const { tmdbId } = props ?? {};
+
+    return removeFromMyList(tmdbId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveFromMyListMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeFromMyList>>
+>;
+
+export type RemoveFromMyListMutationError = ErrorType<ApiError>;
+
+/**
+ * @summary Remove a movie from watchlist
+ */
+export const useRemoveFromMyList = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFromMyList>>,
+    TError,
+    { tmdbId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeFromMyList>>,
+  TError,
+  { tmdbId: number },
+  TContext
+> => {
+  return useMutation(getRemoveFromMyListMutationOptions(options));
+};
 
 /**
  * @summary Search movies by query
@@ -975,6 +1216,93 @@ export function useGetUpcomingMovies<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetUpcomingMoviesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get videos (trailers) for a movie
+ */
+export const getGetMovieVideosUrl = (id: number) => {
+  return `/api/movies/${id}/videos`;
+};
+
+export const getMovieVideos = async (
+  id: number,
+  options?: RequestInit,
+): Promise<VideoListResponse> => {
+  return customFetch<VideoListResponse>(getGetMovieVideosUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMovieVideosQueryKey = (id: number) => {
+  return [`/api/movies/${id}/videos`] as const;
+};
+
+export const getGetMovieVideosQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMovieVideos>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMovieVideos>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMovieVideosQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMovieVideos>>> = ({
+    signal,
+  }) => getMovieVideos(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMovieVideos>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMovieVideosQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMovieVideos>>
+>;
+export type GetMovieVideosQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get videos (trailers) for a movie
+ */
+
+export function useGetMovieVideos<
+  TData = Awaited<ReturnType<typeof getMovieVideos>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMovieVideos>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMovieVideosQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

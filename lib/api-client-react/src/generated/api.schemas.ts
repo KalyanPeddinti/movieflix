@@ -63,6 +63,50 @@ export interface Genre {
   name: string;
 }
 
+export interface WatchlistMovieItem {
+  id: number;
+  tmdb_id: number;
+  title: string;
+  /** @nullable */
+  poster_path?: string | null;
+  /** @nullable */
+  backdrop_path?: string | null;
+  /** @nullable */
+  vote_average?: number | null;
+  /** @nullable */
+  release_date?: string | null;
+  added_at: string;
+}
+
+export interface WatchlistResponse {
+  items: WatchlistMovieItem[];
+}
+
+export interface AddToWatchlistBody {
+  tmdb_id: number;
+  title: string;
+  /** @nullable */
+  poster_path?: string | null;
+  /** @nullable */
+  backdrop_path?: string | null;
+  /** @nullable */
+  vote_average?: number | null;
+  /** @nullable */
+  release_date?: string | null;
+}
+
+export interface VideoResult {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+}
+
+export interface VideoListResponse {
+  results: VideoResult[];
+}
+
 export interface GenreListResponse {
   genres: Genre[];
 }

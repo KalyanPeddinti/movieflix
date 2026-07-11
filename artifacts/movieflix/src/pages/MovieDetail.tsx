@@ -1,18 +1,41 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetMovieDetail, getGetMovieDetailQueryKey } from "@workspace/api-client-react";
+import {
+  useGetMovieDetail,
+  useGetMovieVideos,
+  getGetMovieDetailQueryKey,
+  getGetMovieVideosQueryKey,
+} from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
-import { Play, Plus, ThumbsUp, ArrowLeft, Clock, Calendar } from "lucide-react";
+import { TrailerModal } from "@/components/movies/TrailerModal";
+import { useMyList } from "@/context/MyListContext";
+import { Play, Plus, Check, ThumbsUp, ArrowLeft, Clock, Calendar } from "lucide-react";
 
 export default function MovieDetail() {
   const { id } = useParams();
   const movieId = id ? parseInt(id, 10) : 0;
-  
+  const [showTrailer, setShowTrailer] = useState(false);
+
   const { data: movie, isLoading } = useGetMovieDetail(movieId, {
     query: {
       enabled: !!movieId,
-      queryKey: getGetMovieDetailQueryKey(movieId)
-    }
+      queryKey: getGetMovieDetailQueryKey(movieId),
+    },
   });
+
+  const { data: videosData } = useGetMovieVideos(movieId, {
+    query: {
+      enabled: !!movieId,
+      queryKey: getGetMovieVideosQueryKey(movieId),
+    },
+  });
+
+  const { isInList, addToList, removeFromList } = useMyList();
+  const inList = movie ? isInList(movie.id) : false;
+
+  const trailer = videosData?.results?.find(
+    (v) => v.type === "Trailer" && v.site === "YouTube"
+  ) ?? videosData?.results?.[0];
 
   if (isLoading) {
     return (
@@ -43,14 +66,43 @@ export default function MovieDetail() {
     );
   }
 
-  const backdropUrl = movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : null;
-  const posterUrl = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null;
-  const releaseYear = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
+  const backdropUrl = movie.backdrop_path
+    ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+    : null;
+  const posterUrl = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : null;
+  const releaseYear = movie.release_date
+    ? new Date(movie.release_date).getFullYear()
+    : "";
+
+  const handleWatchlistToggle = () => {
+    if (inList) {
+      removeFromList(movie.id);
+    } else {
+      addToList({
+        tmdb_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path ?? null,
+        backdrop_path: movie.backdrop_path ?? null,
+        vote_average: movie.vote_average ?? null,
+        release_date: movie.release_date ?? null,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       <Navbar />
-      
+
+      {showTrailer && trailer && (
+        <TrailerModal
+          videoKey={trailer.key}
+          title={movie.title}
+          onClose={() => setShowTrailer(false)}
+        />
+      )}
+
       <div className="relative w-full min-h-screen">
         <div className="absolute inset-0 z-0">
           {backdropUrl && (
@@ -66,11 +118,14 @@ export default function MovieDetail() {
 
         <div className="relative z-10 container mx-auto px-4 md:px-8 pt-32 pb-24 min-h-screen flex flex-col justify-center">
           <div className="flex flex-col md:flex-row gap-8 lg:gap-16 items-start md:items-center">
-            
-            {/* Mobile Poster (hidden on desktop for a cleaner look, or shown if wanted) */}
+
             {posterUrl && (
               <div className="w-48 md:w-72 flex-shrink-0 rounded-lg overflow-hidden shadow-2xl border border-white/10 hidden md:block">
-                <img src={posterUrl} alt={`${movie.title} Poster`} className="w-full h-auto object-cover" />
+                <img
+                  src={posterUrl}
+                  alt={`${movie.title} Poster`}
+                  className="w-full h-auto object-cover"
+                />
               </div>
             )}
 
@@ -78,7 +133,7 @@ export default function MovieDetail() {
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-2 drop-shadow-md">
                 {movie.title}
               </h1>
-              
+
               {movie.tagline && (
                 <p className="text-xl md:text-2xl text-gray-300 italic mb-6 font-light">
                   "{movie.tagline}"
@@ -92,10 +147,14 @@ export default function MovieDetail() {
                   </span>
                 )}
                 {releaseYear && (
-                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {releaseYear}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" /> {releaseYear}
+                  </span>
                 )}
                 {movie.runtime ? (
-                  <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {movie.runtime}m</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" /> {movie.runtime}m
+                  </span>
                 ) : null}
                 <span className="px-2 py-0.5 border border-gray-600 rounded text-xs uppercase tracking-wider text-gray-300">
                   {movie.status}
@@ -107,9 +166,9 @@ export default function MovieDetail() {
               </p>
 
               <div className="flex flex-wrap gap-2 mb-10">
-                {movie.genres.map(genre => (
-                  <span 
-                    key={genre.id} 
+                {movie.genres.map((genre) => (
+                  <span
+                    key={genre.id}
                     className="px-3 py-1 bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-md rounded-full text-sm font-medium text-white"
                   >
                     {genre.name}
@@ -118,20 +177,42 @@ export default function MovieDetail() {
               </div>
 
               <div className="flex flex-wrap gap-4 items-center">
-                <button 
-                  className="flex items-center gap-2 px-8 py-3 md:py-4 bg-white text-black font-bold rounded hover:bg-gray-200 transition-colors focus:ring-2 focus:ring-white focus:outline-none"
-                  data-testid="movie-btn-play"
+                {trailer ? (
+                  <button
+                    onClick={() => setShowTrailer(true)}
+                    className="flex items-center gap-2 px-8 py-3 md:py-4 bg-white text-black font-bold rounded hover:bg-gray-200 transition-colors focus:ring-2 focus:ring-white focus:outline-none"
+                    data-testid="btn-play-trailer"
+                  >
+                    <Play className="w-6 h-6 fill-current" /> Play Trailer
+                  </button>
+                ) : (
+                  <button
+                    className="flex items-center gap-2 px-8 py-3 md:py-4 bg-white/20 text-white font-bold rounded cursor-not-allowed opacity-50"
+                    disabled
+                    data-testid="movie-btn-play"
+                  >
+                    <Play className="w-6 h-6 fill-current" /> No Trailer
+                  </button>
+                )}
+
+                <button
+                  onClick={handleWatchlistToggle}
+                  className={`flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full border-2 transition-colors focus:ring-2 focus:ring-white focus:outline-none ${
+                    inList
+                      ? "border-primary bg-primary text-white hover:bg-primary/80"
+                      : "border-gray-400 text-white hover:border-white hover:bg-white/10"
+                  }`}
+                  aria-label={inList ? "Remove from My List" : "Add to My List"}
+                  data-testid="btn-watchlist-toggle"
                 >
-                  <Play className="w-6 h-6 fill-current" /> Play
+                  {inList ? (
+                    <Check className="w-6 h-6" />
+                  ) : (
+                    <Plus className="w-6 h-6" />
+                  )}
                 </button>
-                <button 
-                  className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-gray-400 text-white hover:border-white hover:bg-white/10 transition-colors focus:ring-2 focus:ring-white focus:outline-none"
-                  aria-label="Add to My List"
-                  data-testid="movie-btn-add"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-                <button 
+
+                <button
                   className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-gray-400 text-white hover:border-white hover:bg-white/10 transition-colors focus:ring-2 focus:ring-white focus:outline-none"
                   aria-label="Rate"
                   data-testid="movie-btn-rate"
@@ -139,7 +220,6 @@ export default function MovieDetail() {
                   <ThumbsUp className="w-5 h-5" />
                 </button>
               </div>
-
             </div>
           </div>
         </div>

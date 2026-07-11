@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./addToWatchlistBody";
 export * from "./apiError";
 export * from "./authResponse";
 export * from "./genre";
@@ -19,3 +20,7 @@ export * from "./movieListResponse";
 export * from "./registerBody";
 export * from "./searchMoviesParams";
 export * from "./userProfile";
+export * from "./videoListResponse";
+export * from "./videoResult";
+export * from "./watchlistMovieItem";
+export * from "./watchlistResponse";

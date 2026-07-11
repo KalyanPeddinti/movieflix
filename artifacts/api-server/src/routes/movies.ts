@@ -66,6 +66,29 @@ router.get("/by-genre", async (req, res): Promise<void> => {
   }
 });
 
+router.get("/:id/videos", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid movie ID" });
+    return;
+  }
+  try {
+    const data = await tmdbFetch(`/movie/${id}/videos?language=en-US`);
+    const youtubeVideos = (data.results ?? []).filter(
+      (v: { site: string; type: string; key: string; id: string; name: string }) =>
+        v.site === "YouTube"
+    );
+    res.json({ results: youtubeVideos });
+  } catch (err: unknown) {
+    const msg = String(err);
+    if (msg.includes("404")) {
+      res.status(404).json({ error: "Movie not found" });
+    } else {
+      res.status(500).json({ error: msg });
+    }
+  }
+});
+
 router.get("/trending", async (_req, res) => {
   try {
     const data = await tmdbFetch("/trending/movie/week?language=en-US");
