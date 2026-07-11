@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+<head>
+<style type = "text/css">
+body 
+{
+background-color: #D1AC19;
+background-size: 100% 100%;
+background-repeat: no-repeat;
+}
+#GMU 
+{
+color:GOLD;
+text-align:center;
+padding:30px;
+font-size:300%;
+background-color:green;
+text-shadow: 5px 5px 5px #000000;
+}
+h1
+{
+text-align:center;
+color:#5C1F00;
+
+}
+.MyID
+{
+position: fixed;
+bottom: 5px;
+left: 5px;
+height: 20px;
+}
+img.fixImage
+{
+position: fixed;
+bottom: 5px;
+right: 5px;
+height: 100px;
+width: 100px
+}
+
+#Left
+{
+Width: 20%;
+height: 100%;
+float: Left;
+border-style: solid;
+border-color: transparent;
+background-color:transparent;
+padding: 10px;
+border-padding: 5px;
+}
+.WhiteFont
+{
+font-color: white;
+
+}
+
+#center
+{
+Width: 50%;
+height: 100%;
+float: Left;
+border-style: solid;
+border-color: transparent;
+background-color: transparent;
+padding: 5px;
+border-padding: 5px;
+font-color: white;
+}
+#Right
+{
+Width: 20%;
+height: 100%;
+float: Left;
+border-style: solid;
+border-color: transparent;
+background-color: transparent;
+padding: 5px;
+}
+</style>
+</head>
+
+<body>
+<div id="GMU">
+
+GEORGE MASON UNIVERSITY
+
+</div>
+<h1><strong>
+COMPUTER SCIENCE DEPARTMENT
+</strong></h1>
+<div id="Left">
+<nav>
+    <ul>
+      <li><a href="CSDepartment.html"><strong>HOME</strong></a></li>
+      <li><a href="CSDepartment.html#degreePrograms"><strong>PROGRAMS OFFERED</strong></a></li>
+      <li><a href="CSDepartment.html#MSinCS"><strong>Master's in Computer Science</strong></a></li>
+  <li><a href="CSDepartment.html#MSinISA"><strong>Master's in Information Security and Analysis</strong></a></li>
+  <li><a href="CSDepartment.html#MSinINFS"><strong>Master's in Information Systems</strong></a></li>
+  <li><a href="CSDepartment.html#MSinSWE"><strong>Master's in Software Engineering</strong></a></li>
+      <li><a href="survey.html"><strong>FEEDBACK</strong></a></li>
+    </ul>
+</nav>
+</div>
+<div id= "center"  >
+<h2> EVERY STUDENT IS REQUESTED TO FILL IN THE FOLLOWING SURVEY WITH THEIR DETAILS. </h2>
+<form>
+<table>
+<tbody>
+<tr>
+<td><label> Name: </label></td>
+<td><input name = "name" type = "text" autocomplete = "on" size = "30" maxlength = "50" /></td>
+</tr>
+<tr>
+<td><label>Address: </label></td>
+<td><input name = "Address" type = "text" autocomplete = "on" placeholder = "Enter your Street Address" /></td>
+</tr>
+<tr>
+<td><label>City: </label></td>
+<td><input name = "City" type = "text" autocomplete = "on" placeholder = "Enter your City" /></td>
+
+</tr>
+<tr>
+<td><label>State:</label></td>
+<td><input name = "State" type = "text" autocomplete = "on" placeholder = "Enter your State" /></td>
+</tr>
+<tr>
+<td><label>ZIP Code:</label></td>
+<td><input name = "ZIP Code" type = "number" maxlength = "5" autocomplete = "on" placeholder = "Enter your ZIP Code" /></td>
+</tr>
+<tr>
+<td><label>Email: </label></td>
+<td><input name = "Email" type = "email" autocomplete = "on" placeholder = "email ID@example.com" /></td>
+</tr>
+<tr>
+<td><label>Contact Number:</label></td>
+<td><input name = "Contact" type = "tel" autocomplete = "on" placeholder = "(XXX)XXX-XXXX" /></td>
+</tr>
+<tr>
+<td><label>URL: </label></td>
+<td><input name = "url" type = "url" autocomplete = "on" placeholder = "http://yourwebsite.com" /></td>
+</tr>
+<tr>
+<td><label> Date of survey: </label> </td>
+<td><input name = "Date" type = "date" autocomplete = "on" placeholder = "mm/dd/yyyy" /></td>
+</tr>
+</table>
+
+<p>What do you like the most about the campus:</p>
+<p>
+<input name = "interest" type = "checkbox" value = "Student" />Student
+<input name = "interest" type = "checkbox" value = "Location" />Location
+<input name = "interest" type = "checkbox" value = "Campus" />Campus
+<input name = "interest" type = "checkbox" value = "Atmosphere" />Atmosphere
+<input name = "interest" type = "checkbox" value = "Dorm Rooms" />Dorm Rooms
+<input name = "interest" type = "checkbox" value = "Sports" />Sports
+</p>
+
+
+<p>How did you come to know about the School?</p>
+
+Friends<input name = "interest" type = "checkbox" value = "Friends" />
+Television<input name = "interest" type = "checkbox" value = "Television" />
+Internet<input name = "interest" type = "checkbox" value = "Internet" />
+Others<input name = "interest" type = "checkbox" value = "Others" />
+
+
+
+<p>Feel free to add in your comments about our School that you would like to see to improve</p>
+<p>
+<textarea name = "comments" cols = "25" rows = "5" placeholder = "Write your comments HERE"></textarea>
+</p>
+
+
+<p>Enter the year you have graduated your High-School:</p>
+
+
+<p><input list = "month" name = "month">
+<datalist id = "month">
+<option value = "January">
+<option value = "February">
+<option value = "March">
+<option value = "April">
+<option value = "May">
+<option value = "June">
+<option value = "July">
+<option value = "August">
+<option value = "September">
+<option value = "October">
+<option value = "November">
+<option value = "December">
+</datalist>
+<input name = "year" type = "number" />
+</p>
+<p>
+How likely are you going to recommend your School to prospective students?
+</p>
+<p>
+<select name="suggest">
+<option value="VL">Very likely</option>
+<option value="L">Likely</option>
+<option value="UL">Unlikely</option>
+</select>
+</p>
+<tr>
+<td><input type = "submit" value = "submit"/>
+<input type = "reset" value = "clear"/></td>
+</tr>
+</form>
+</div>
+
+<div id= "Right">
+<h3>LOCATION OF CS DEPARTMENT</h3>
+<p> The CS Department is located at the 4th floor of the Long &amp; Kimmy Nguyen Engineering Building </p>
+</div>
+<div class = "MyID">
+Kalyan Peddinti
+G00861795
+</div>
+</body>
+</html>
