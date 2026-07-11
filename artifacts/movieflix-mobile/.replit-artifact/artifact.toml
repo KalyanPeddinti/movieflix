@@ -1,0 +1,23 @@
+kind = "mobile"
+previewPath = "/movieflix-mobile/"
+title = "MovieFlix Mobile"
+version = "1.0.0"
+id = "artifacts/movieflix-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/movieflix-mobile/" ]
+localPort = 25526
+
+[services.development]
+run = "pnpm --filter @workspace/movieflix-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/movieflix-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/movieflix-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "25526"
+BASE_PATH = "/movieflix-mobile/"
