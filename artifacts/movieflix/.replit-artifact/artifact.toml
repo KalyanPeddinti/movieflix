@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/movieflix/"
+title = "MovieFlix"
+version = "1.0.0"
+id = "artifacts/movieflix"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/movieflix/" ]
+localPort = 18220
+
+[services.development]
+run = "pnpm --filter @workspace/movieflix run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/movieflix", "run", "build" ]
+publicDir = "artifacts/movieflix/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18220"
+BASE_PATH = "/movieflix/"

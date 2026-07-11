@@ -10,8 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
-  - name: gemini
-    description: Gemini AI chat and image operations
+  - name: movies
+    description: Movie data from TMDB
 paths:
   /healthz:
     get:
@@ -26,42 +26,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
-  /gemini/conversations:
+  /movies/trending:
     get:
-      operationId: listGeminiConversations
-      tags: [gemini]
-      summary: List all conversations
+      operationId: getTrendingMovies
+      tags: [movies]
+      summary: Get trending movies
       responses:
         "200":
-          description: List of conversations
+          description: List of trending movies
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/GeminiConversation"
-    post:
-      operationId: createGeminiConversation
-      tags: [gemini]
-      summary: Create a new conversation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateGeminiConversationBody"
-      responses:
-        "201":
-          description: Created conversation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GeminiConversation"
-  /gemini/conversations/{id}:
+                $ref: "#/components/schemas/MovieListResponse"
+  /movies/popular:
     get:
-      operationId: getGeminiConversation
-      tags: [gemini]
-      summary: Get conversation with messages
+      operationId: getPopularMovies
+      tags: [movies]
+      summary: Get popular movies
+      responses:
+        "200":
+          description: List of popular movies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieListResponse"
+  /movies/top-rated:
+    get:
+      operationId: getTopRatedMovies
+      tags: [movies]
+      summary: Get top rated movies
+      responses:
+        "200":
+          description: List of top rated movies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieListResponse"
+  /movies/now-playing:
+    get:
+      operationId: getNowPlayingMovies
+      tags: [movies]
+      summary: Get now playing movies
+      responses:
+        "200":
+          description: List of now playing movies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieListResponse"
+  /movies/upcoming:
+    get:
+      operationId: getUpcomingMovies
+      tags: [movies]
+      summary: Get upcoming movies
+      responses:
+        "200":
+          description: List of upcoming movies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieListResponse"
+  /movies/{id}:
+    get:
+      operationId: getMovieDetail
+      tags: [movies]
+      summary: Get movie detail by ID
       parameters:
         - name: id
           in: path
@@ -70,77 +99,17 @@ paths:
             type: integer
       responses:
         "200":
-          description: Conversation with messages
+          description: Movie detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GeminiConversationWithMessages"
+                $ref: "#/components/schemas/MovieDetail"
         "404":
           description: Not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GeminiError"
-    delete:
-      operationId: deleteGeminiConversation
-      tags: [gemini]
-      summary: Delete a conversation
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Deleted
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GeminiError"
-  /gemini/conversations/{id}/messages:
-    get:
-      operationId: listGeminiMessages
-      tags: [gemini]
-      summary: List messages in a conversation
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: List of messages
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/GeminiMessage"
-    post:
-      operationId: sendGeminiMessage
-      tags: [gemini]
-      summary: Send a message and receive an AI response (SSE stream)
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SendGeminiMessageBody"
-      responses:
-        "200":
-          description: SSE stream of assistant response chunks
-          content:
-            text/event-stream: {}
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -150,77 +119,116 @@ components:
           type: string
       required:
         - status
-    GeminiConversation:
-      type: object
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - title
-        - createdAt
-    GeminiMessage:
-      type: object
-      properties:
-        id:
-          type: integer
-        conversationId:
-          type: integer
-        role:
-          type: string
-        content:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - conversationId
-        - role
-        - content
-        - createdAt
-    CreateGeminiConversationBody:
-      type: object
-      properties:
-        title:
-          type: string
-      required:
-        - title
-    SendGeminiMessageBody:
-      type: object
-      properties:
-        content:
-          type: string
-      required:
-        - content
-    GeminiConversationWithMessages:
-      type: object
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        messages:
-          type: array
-          items:
-            $ref: "#/components/schemas/GeminiMessage"
-      required:
-        - id
-        - title
-        - createdAt
-        - messages
-    GeminiError:
+    ApiError:
       type: object
       properties:
         error:
           type: string
       required:
         - error
+    Movie:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        overview:
+          type: string
+        poster_path:
+          type: ["string", "null"]
+        backdrop_path:
+          type: ["string", "null"]
+        vote_average:
+          type: number
+        vote_count:
+          type: integer
+        release_date:
+          type: string
+        genre_ids:
+          type: array
+          items:
+            type: integer
+        popularity:
+          type: number
+      required:
+        - id
+        - title
+        - overview
+        - vote_average
+        - vote_count
+        - release_date
+        - genre_ids
+        - popularity
+    MovieListResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Movie"
+        page:
+          type: integer
+        total_pages:
+          type: integer
+        total_results:
+          type: integer
+      required:
+        - results
+        - page
+        - total_pages
+        - total_results
+    Genre:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+        - id
+        - name
+    MovieDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        tagline:
+          type: string
+        overview:
+          type: string
+        poster_path:
+          type: ["string", "null"]
+        backdrop_path:
+          type: ["string", "null"]
+        vote_average:
+          type: number
+        vote_count:
+          type: integer
+        release_date:
+          type: string
+        runtime:
+          type: ["integer", "null"]
+        genres:
+          type: array
+          items:
+            $ref: "#/components/schemas/Genre"
+        popularity:
+          type: number
+        status:
+          type: string
+        homepage:
+          type: ["string", "null"]
+      required:
+        - id
+        - title
+        - tagline
+        - overview
+        - vote_average
+        - vote_count
+        - release_date
+        - genres
+        - popularity
+        - status
