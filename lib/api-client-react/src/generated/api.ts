@@ -5,29 +5,23 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type {
-  MutationFunction,
   QueryFunction,
   QueryKey,
-  UseMutationOptions,
-  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
 import type {
-  CreateGeminiConversationBody,
-  GeminiConversation,
-  GeminiConversationWithMessages,
-  GeminiError,
-  GeminiMessage,
+  ApiError,
   HealthStatus,
-  SendGeminiMessageBody,
+  MovieDetail,
+  MovieListResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType, BodyType } from "../custom-fetch";
+import type { ErrorType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -112,31 +106,31 @@ export function useHealthCheck<
 }
 
 /**
- * @summary List all conversations
+ * @summary Get trending movies
  */
-export const getListGeminiConversationsUrl = () => {
-  return `/api/gemini/conversations`;
+export const getGetTrendingMoviesUrl = () => {
+  return `/api/movies/trending`;
 };
 
-export const listGeminiConversations = async (
+export const getTrendingMovies = async (
   options?: RequestInit,
-): Promise<GeminiConversation[]> => {
-  return customFetch<GeminiConversation[]>(getListGeminiConversationsUrl(), {
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getGetTrendingMoviesUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListGeminiConversationsQueryKey = () => {
-  return [`/api/gemini/conversations`] as const;
+export const getGetTrendingMoviesQueryKey = () => {
+  return [`/api/movies/trending`] as const;
 };
 
-export const getListGeminiConversationsQueryOptions = <
-  TData = Awaited<ReturnType<typeof listGeminiConversations>>,
+export const getGetTrendingMoviesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTrendingMovies>>,
   TError = ErrorType<unknown>,
 >(options?: {
   query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listGeminiConversations>>,
+    Awaited<ReturnType<typeof getTrendingMovies>>,
     TError,
     TData
   >;
@@ -144,41 +138,40 @@ export const getListGeminiConversationsQueryOptions = <
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getListGeminiConversationsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetTrendingMoviesQueryKey();
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof listGeminiConversations>>
-  > = ({ signal }) => listGeminiConversations({ signal, ...requestOptions });
+    Awaited<ReturnType<typeof getTrendingMovies>>
+  > = ({ signal }) => getTrendingMovies({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listGeminiConversations>>,
+    Awaited<ReturnType<typeof getTrendingMovies>>,
     TError,
     TData
   > & { queryKey: QueryKey };
 };
 
-export type ListGeminiConversationsQueryResult = NonNullable<
-  Awaited<ReturnType<typeof listGeminiConversations>>
+export type GetTrendingMoviesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTrendingMovies>>
 >;
-export type ListGeminiConversationsQueryError = ErrorType<unknown>;
+export type GetTrendingMoviesQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all conversations
+ * @summary Get trending movies
  */
 
-export function useListGeminiConversations<
-  TData = Awaited<ReturnType<typeof listGeminiConversations>>,
+export function useGetTrendingMovies<
+  TData = Awaited<ReturnType<typeof getTrendingMovies>>,
   TError = ErrorType<unknown>,
 >(options?: {
   query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listGeminiConversations>>,
+    Awaited<ReturnType<typeof getTrendingMovies>>,
     TError,
     TData
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListGeminiConversationsQueryOptions(options);
+  const queryOptions = getGetTrendingMoviesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -188,346 +181,72 @@ export function useListGeminiConversations<
 }
 
 /**
- * @summary Create a new conversation
+ * @summary Get popular movies
  */
-export const getCreateGeminiConversationUrl = () => {
-  return `/api/gemini/conversations`;
+export const getGetPopularMoviesUrl = () => {
+  return `/api/movies/popular`;
 };
 
-export const createGeminiConversation = async (
-  createGeminiConversationBody: CreateGeminiConversationBody,
+export const getPopularMovies = async (
   options?: RequestInit,
-): Promise<GeminiConversation> => {
-  return customFetch<GeminiConversation>(getCreateGeminiConversationUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createGeminiConversationBody),
-  });
-};
-
-export const getCreateGeminiConversationMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createGeminiConversation>>,
-    TError,
-    { data: BodyType<CreateGeminiConversationBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createGeminiConversation>>,
-  TError,
-  { data: BodyType<CreateGeminiConversationBody> },
-  TContext
-> => {
-  const mutationKey = ["createGeminiConversation"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createGeminiConversation>>,
-    { data: BodyType<CreateGeminiConversationBody> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return createGeminiConversation(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CreateGeminiConversationMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createGeminiConversation>>
->;
-export type CreateGeminiConversationMutationBody =
-  BodyType<CreateGeminiConversationBody>;
-export type CreateGeminiConversationMutationError = ErrorType<unknown>;
-
-/**
- * @summary Create a new conversation
- */
-export const useCreateGeminiConversation = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createGeminiConversation>>,
-    TError,
-    { data: BodyType<CreateGeminiConversationBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof createGeminiConversation>>,
-  TError,
-  { data: BodyType<CreateGeminiConversationBody> },
-  TContext
-> => {
-  return useMutation(getCreateGeminiConversationMutationOptions(options));
-};
-
-/**
- * @summary Get conversation with messages
- */
-export const getGetGeminiConversationUrl = (id: number) => {
-  return `/api/gemini/conversations/${id}`;
-};
-
-export const getGeminiConversation = async (
-  id: number,
-  options?: RequestInit,
-): Promise<GeminiConversationWithMessages> => {
-  return customFetch<GeminiConversationWithMessages>(
-    getGetGeminiConversationUrl(id),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
-};
-
-export const getGetGeminiConversationQueryKey = (id: number) => {
-  return [`/api/gemini/conversations/${id}`] as const;
-};
-
-export const getGetGeminiConversationQueryOptions = <
-  TData = Awaited<ReturnType<typeof getGeminiConversation>>,
-  TError = ErrorType<GeminiError>,
->(
-  id: number,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getGeminiConversation>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ?? getGetGeminiConversationQueryKey(id);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getGeminiConversation>>
-  > = ({ signal }) => getGeminiConversation(id, { signal, ...requestOptions });
-
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!id,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof getGeminiConversation>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
-};
-
-export type GetGeminiConversationQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getGeminiConversation>>
->;
-export type GetGeminiConversationQueryError = ErrorType<GeminiError>;
-
-/**
- * @summary Get conversation with messages
- */
-
-export function useGetGeminiConversation<
-  TData = Awaited<ReturnType<typeof getGeminiConversation>>,
-  TError = ErrorType<GeminiError>,
->(
-  id: number,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getGeminiConversation>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetGeminiConversationQueryOptions(id, options);
-
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-/**
- * @summary Delete a conversation
- */
-export const getDeleteGeminiConversationUrl = (id: number) => {
-  return `/api/gemini/conversations/${id}`;
-};
-
-export const deleteGeminiConversation = async (
-  id: number,
-  options?: RequestInit,
-): Promise<void> => {
-  return customFetch<void>(getDeleteGeminiConversationUrl(id), {
-    ...options,
-    method: "DELETE",
-  });
-};
-
-export const getDeleteGeminiConversationMutationOptions = <
-  TError = ErrorType<GeminiError>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof deleteGeminiConversation>>,
-    TError,
-    { id: number },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof deleteGeminiConversation>>,
-  TError,
-  { id: number },
-  TContext
-> => {
-  const mutationKey = ["deleteGeminiConversation"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof deleteGeminiConversation>>,
-    { id: number }
-  > = (props) => {
-    const { id } = props ?? {};
-
-    return deleteGeminiConversation(id, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type DeleteGeminiConversationMutationResult = NonNullable<
-  Awaited<ReturnType<typeof deleteGeminiConversation>>
->;
-
-export type DeleteGeminiConversationMutationError = ErrorType<GeminiError>;
-
-/**
- * @summary Delete a conversation
- */
-export const useDeleteGeminiConversation = <
-  TError = ErrorType<GeminiError>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof deleteGeminiConversation>>,
-    TError,
-    { id: number },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof deleteGeminiConversation>>,
-  TError,
-  { id: number },
-  TContext
-> => {
-  return useMutation(getDeleteGeminiConversationMutationOptions(options));
-};
-
-/**
- * @summary List messages in a conversation
- */
-export const getListGeminiMessagesUrl = (id: number) => {
-  return `/api/gemini/conversations/${id}/messages`;
-};
-
-export const listGeminiMessages = async (
-  id: number,
-  options?: RequestInit,
-): Promise<GeminiMessage[]> => {
-  return customFetch<GeminiMessage[]>(getListGeminiMessagesUrl(id), {
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getGetPopularMoviesUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListGeminiMessagesQueryKey = (id: number) => {
-  return [`/api/gemini/conversations/${id}/messages`] as const;
+export const getGetPopularMoviesQueryKey = () => {
+  return [`/api/movies/popular`] as const;
 };
 
-export const getListGeminiMessagesQueryOptions = <
-  TData = Awaited<ReturnType<typeof listGeminiMessages>>,
+export const getGetPopularMoviesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPopularMovies>>,
   TError = ErrorType<unknown>,
->(
-  id: number,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof listGeminiMessages>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-) => {
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPopularMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListGeminiMessagesQueryKey(id);
+  const queryKey = queryOptions?.queryKey ?? getGetPopularMoviesQueryKey();
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof listGeminiMessages>>
-  > = ({ signal }) => listGeminiMessages(id, { signal, ...requestOptions });
+    Awaited<ReturnType<typeof getPopularMovies>>
+  > = ({ signal }) => getPopularMovies({ signal, ...requestOptions });
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!id,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof listGeminiMessages>>,
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPopularMovies>>,
     TError,
     TData
   > & { queryKey: QueryKey };
 };
 
-export type ListGeminiMessagesQueryResult = NonNullable<
-  Awaited<ReturnType<typeof listGeminiMessages>>
+export type GetPopularMoviesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPopularMovies>>
 >;
-export type ListGeminiMessagesQueryError = ErrorType<unknown>;
+export type GetPopularMoviesQueryError = ErrorType<unknown>;
 
 /**
- * @summary List messages in a conversation
+ * @summary Get popular movies
  */
 
-export function useListGeminiMessages<
-  TData = Awaited<ReturnType<typeof listGeminiMessages>>,
+export function useGetPopularMovies<
+  TData = Awaited<ReturnType<typeof getPopularMovies>>,
   TError = ErrorType<unknown>,
->(
-  id: number,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof listGeminiMessages>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListGeminiMessagesQueryOptions(id, options);
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPopularMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPopularMoviesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -537,88 +256,313 @@ export function useListGeminiMessages<
 }
 
 /**
- * @summary Send a message and receive an AI response (SSE stream)
+ * @summary Get top rated movies
  */
-export const getSendGeminiMessageUrl = (id: number) => {
-  return `/api/gemini/conversations/${id}/messages`;
+export const getGetTopRatedMoviesUrl = () => {
+  return `/api/movies/top-rated`;
 };
 
-export const sendGeminiMessage = async (
-  id: number,
-  sendGeminiMessageBody: SendGeminiMessageBody,
+export const getTopRatedMovies = async (
   options?: RequestInit,
-): Promise<unknown> => {
-  return customFetch<unknown>(getSendGeminiMessageUrl(id), {
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getGetTopRatedMoviesUrl(), {
     ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(sendGeminiMessageBody),
+    method: "GET",
   });
 };
 
-export const getSendGeminiMessageMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof sendGeminiMessage>>,
-    TError,
-    { id: number; data: BodyType<SendGeminiMessageBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof sendGeminiMessage>>,
-  TError,
-  { id: number; data: BodyType<SendGeminiMessageBody> },
-  TContext
-> => {
-  const mutationKey = ["sendGeminiMessage"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof sendGeminiMessage>>,
-    { id: number; data: BodyType<SendGeminiMessageBody> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return sendGeminiMessage(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
+export const getGetTopRatedMoviesQueryKey = () => {
+  return [`/api/movies/top-rated`] as const;
 };
 
-export type SendGeminiMessageMutationResult = NonNullable<
-  Awaited<ReturnType<typeof sendGeminiMessage>>
+export const getGetTopRatedMoviesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTopRatedMovies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTopRatedMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTopRatedMoviesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTopRatedMovies>>
+  > = ({ signal }) => getTopRatedMovies({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTopRatedMovies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTopRatedMoviesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTopRatedMovies>>
 >;
-export type SendGeminiMessageMutationBody = BodyType<SendGeminiMessageBody>;
-export type SendGeminiMessageMutationError = ErrorType<unknown>;
+export type GetTopRatedMoviesQueryError = ErrorType<unknown>;
 
 /**
- * @summary Send a message and receive an AI response (SSE stream)
+ * @summary Get top rated movies
  */
-export const useSendGeminiMessage = <
+
+export function useGetTopRatedMovies<
+  TData = Awaited<ReturnType<typeof getTopRatedMovies>>,
   TError = ErrorType<unknown>,
-  TContext = unknown,
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof sendGeminiMessage>>,
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTopRatedMovies>>,
     TError,
-    { id: number; data: BodyType<SendGeminiMessageBody> },
-    TContext
+    TData
   >;
   request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof sendGeminiMessage>>,
-  TError,
-  { id: number; data: BodyType<SendGeminiMessageBody> },
-  TContext
-> => {
-  return useMutation(getSendGeminiMessageMutationOptions(options));
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTopRatedMoviesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get now playing movies
+ */
+export const getGetNowPlayingMoviesUrl = () => {
+  return `/api/movies/now-playing`;
 };
+
+export const getNowPlayingMovies = async (
+  options?: RequestInit,
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getGetNowPlayingMoviesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetNowPlayingMoviesQueryKey = () => {
+  return [`/api/movies/now-playing`] as const;
+};
+
+export const getGetNowPlayingMoviesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNowPlayingMovies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getNowPlayingMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetNowPlayingMoviesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNowPlayingMovies>>
+  > = ({ signal }) => getNowPlayingMovies({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNowPlayingMovies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetNowPlayingMoviesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNowPlayingMovies>>
+>;
+export type GetNowPlayingMoviesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get now playing movies
+ */
+
+export function useGetNowPlayingMovies<
+  TData = Awaited<ReturnType<typeof getNowPlayingMovies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getNowPlayingMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetNowPlayingMoviesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get upcoming movies
+ */
+export const getGetUpcomingMoviesUrl = () => {
+  return `/api/movies/upcoming`;
+};
+
+export const getUpcomingMovies = async (
+  options?: RequestInit,
+): Promise<MovieListResponse> => {
+  return customFetch<MovieListResponse>(getGetUpcomingMoviesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUpcomingMoviesQueryKey = () => {
+  return [`/api/movies/upcoming`] as const;
+};
+
+export const getGetUpcomingMoviesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUpcomingMovies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getUpcomingMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUpcomingMoviesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getUpcomingMovies>>
+  > = ({ signal }) => getUpcomingMovies({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUpcomingMovies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetUpcomingMoviesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUpcomingMovies>>
+>;
+export type GetUpcomingMoviesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get upcoming movies
+ */
+
+export function useGetUpcomingMovies<
+  TData = Awaited<ReturnType<typeof getUpcomingMovies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getUpcomingMovies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUpcomingMoviesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get movie detail by ID
+ */
+export const getGetMovieDetailUrl = (id: number) => {
+  return `/api/movies/${id}`;
+};
+
+export const getMovieDetail = async (
+  id: number,
+  options?: RequestInit,
+): Promise<MovieDetail> => {
+  return customFetch<MovieDetail>(getGetMovieDetailUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMovieDetailQueryKey = (id: number) => {
+  return [`/api/movies/${id}`] as const;
+};
+
+export const getGetMovieDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMovieDetail>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMovieDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMovieDetailQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMovieDetail>>> = ({
+    signal,
+  }) => getMovieDetail(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMovieDetail>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMovieDetailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMovieDetail>>
+>;
+export type GetMovieDetailQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get movie detail by ID
+ */
+
+export function useGetMovieDetail<
+  TData = Awaited<ReturnType<typeof getMovieDetail>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMovieDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMovieDetailQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

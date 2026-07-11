@@ -9,35 +9,54 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface GeminiConversation {
-  id: number;
-  title: string;
-  createdAt: string;
-}
-
-export interface GeminiMessage {
-  id: number;
-  conversationId: number;
-  role: string;
-  content: string;
-  createdAt: string;
-}
-
-export interface CreateGeminiConversationBody {
-  title: string;
-}
-
-export interface SendGeminiMessageBody {
-  content: string;
-}
-
-export interface GeminiConversationWithMessages {
-  id: number;
-  title: string;
-  createdAt: string;
-  messages: GeminiMessage[];
-}
-
-export interface GeminiError {
+export interface ApiError {
   error: string;
+}
+
+export interface Movie {
+  id: number;
+  title: string;
+  overview: string;
+  /** @nullable */
+  poster_path?: string | null;
+  /** @nullable */
+  backdrop_path?: string | null;
+  vote_average: number;
+  vote_count: number;
+  release_date: string;
+  genre_ids: number[];
+  popularity: number;
+}
+
+export interface MovieListResponse {
+  results: Movie[];
+  page: number;
+  total_pages: number;
+  total_results: number;
+}
+
+export interface Genre {
+  id: number;
+  name: string;
+}
+
+export interface MovieDetail {
+  id: number;
+  title: string;
+  tagline: string;
+  overview: string;
+  /** @nullable */
+  poster_path?: string | null;
+  /** @nullable */
+  backdrop_path?: string | null;
+  vote_average: number;
+  vote_count: number;
+  release_date: string;
+  /** @nullable */
+  runtime?: number | null;
+  genres: Genre[];
+  popularity: number;
+  status: string;
+  /** @nullable */
+  homepage?: string | null;
 }

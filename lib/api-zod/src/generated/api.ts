@@ -16,78 +16,145 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary List all conversations
+ * @summary Get trending movies
  */
-export const ListGeminiConversationsResponseItem = zod.object({
-  id: zod.number(),
-  title: zod.string(),
-  createdAt: zod.date(),
-});
-export const ListGeminiConversationsResponse = zod.array(
-  ListGeminiConversationsResponseItem,
-);
-
-/**
- * @summary Create a new conversation
- */
-export const CreateGeminiConversationBody = zod.object({
-  title: zod.string(),
-});
-
-/**
- * @summary Get conversation with messages
- */
-export const GetGeminiConversationParams = zod.object({
-  id: zod.coerce.number(),
-});
-
-export const GetGeminiConversationResponse = zod.object({
-  id: zod.number(),
-  title: zod.string(),
-  createdAt: zod.date(),
-  messages: zod.array(
+export const GetTrendingMoviesResponse = zod.object({
+  results: zod.array(
     zod.object({
       id: zod.number(),
-      conversationId: zod.number(),
-      role: zod.string(),
-      content: zod.string(),
-      createdAt: zod.date(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
     }),
   ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
 });
 
 /**
- * @summary Delete a conversation
+ * @summary Get popular movies
  */
-export const DeleteGeminiConversationParams = zod.object({
-  id: zod.coerce.number(),
+export const GetPopularMoviesResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
+    }),
+  ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
 });
 
 /**
- * @summary List messages in a conversation
+ * @summary Get top rated movies
  */
-export const ListGeminiMessagesParams = zod.object({
+export const GetTopRatedMoviesResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
+    }),
+  ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
+});
+
+/**
+ * @summary Get now playing movies
+ */
+export const GetNowPlayingMoviesResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
+    }),
+  ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
+});
+
+/**
+ * @summary Get upcoming movies
+ */
+export const GetUpcomingMoviesResponse = zod.object({
+  results: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      overview: zod.string(),
+      poster_path: zod.string().nullish(),
+      backdrop_path: zod.string().nullish(),
+      vote_average: zod.number(),
+      vote_count: zod.number(),
+      release_date: zod.string(),
+      genre_ids: zod.array(zod.number()),
+      popularity: zod.number(),
+    }),
+  ),
+  page: zod.number(),
+  total_pages: zod.number(),
+  total_results: zod.number(),
+});
+
+/**
+ * @summary Get movie detail by ID
+ */
+export const GetMovieDetailParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const ListGeminiMessagesResponseItem = zod.object({
+export const GetMovieDetailResponse = zod.object({
   id: zod.number(),
-  conversationId: zod.number(),
-  role: zod.string(),
-  content: zod.string(),
-  createdAt: zod.date(),
-});
-export const ListGeminiMessagesResponse = zod.array(
-  ListGeminiMessagesResponseItem,
-);
-
-/**
- * @summary Send a message and receive an AI response (SSE stream)
- */
-export const SendGeminiMessageParams = zod.object({
-  id: zod.coerce.number(),
-});
-
-export const SendGeminiMessageBody = zod.object({
-  content: zod.string(),
+  title: zod.string(),
+  tagline: zod.string(),
+  overview: zod.string(),
+  poster_path: zod.string().nullish(),
+  backdrop_path: zod.string().nullish(),
+  vote_average: zod.number(),
+  vote_count: zod.number(),
+  release_date: zod.string(),
+  runtime: zod.number().nullish(),
+  genres: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+    }),
+  ),
+  popularity: zod.number(),
+  status: zod.string(),
+  homepage: zod.string().nullish(),
 });
