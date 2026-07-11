@@ -41,7 +41,7 @@ export function HeroBanner({ movie, isLoading }: HeroBannerProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
       </div>
 
-      <div className="relative z-10 h-full flex items-end pb-12 md:pb-24">
+      <div className="relative z-30 h-full flex items-end pb-12 md:pb-24">
         <div className="container mx-auto px-4 md:px-8 flex flex-col gap-4 w-full md:w-2/3 lg:w-1/2">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight drop-shadow-lg">
             {movie.title}

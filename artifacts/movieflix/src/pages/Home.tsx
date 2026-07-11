@@ -51,7 +51,7 @@ export default function Home() {
       <main>
         <HeroBanner movie={featuredMovie} isLoading={isLoadingTrending && isLoadingPopular} />
         
-        <div className="relative z-20 -mt-24 md:-mt-32 pb-20 flex flex-col gap-4 md:gap-8">
+        <div className="relative z-20 -mt-6 md:-mt-10 pb-20 flex flex-col gap-4 md:gap-8">
           {(myListMovies.length > 0 || isLoadingMyList) && (
             <MovieRow
               title="My List"
